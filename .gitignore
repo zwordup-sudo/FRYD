@@ -1,0 +1,41 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Databases
+*.db
+*.sqlite3
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Node modules & build outputs
+node_modules/
+dist/
+build/
+.eslintcache
+
+# Environment variables
+.env
+local_settings.py
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code & Temp files
+.claude/
+*.log
+prueba_escritura.txt
+prueba_real.txt
+Save1.txt
+Save2.txt
+2026-03-23-195053-resume-be691fc1-3ef9-461e-94e0-8e6642aaa521.txt
