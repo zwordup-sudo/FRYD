@@ -5,6 +5,7 @@ class UserCreate(BaseModel):
     username: str
     email: str
     password: str
+    profile_focus: str | None = "personal"
 
 class UserLogin(BaseModel):
     email: str
@@ -20,6 +21,7 @@ class UserRead(BaseModel):
     ai_provider: str | None = "ollama"
     ai_model: str | None = "llama3"
     ai_api_key: str | None = None
+    profile_focus: str | None = "personal"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -40,6 +42,7 @@ class UserSettingsUpdate(BaseModel):
     ai_provider: str | None = None
     ai_model: str | None = None
     ai_api_key: str | None = None
+    profile_focus: str | None = None
 
 class Token(BaseModel):
     access_token: str

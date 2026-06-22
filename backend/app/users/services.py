@@ -14,7 +14,8 @@ def create_user(db: Session, user_create: UserCreate):
     user = User(
         username=user_create.username,
         email=user_create.email,
-        hashed_password=hashed_pwd
+        hashed_password=hashed_pwd,
+        profile_focus=user_create.profile_focus
     )
     db.add(user)
     db.commit()
@@ -51,6 +52,8 @@ def update_user_settings(db: Session, user: User, settings: UserSettingsUpdate):
             user.ai_api_key = key_val
         elif not key_val:
             user.ai_api_key = None
+    if settings.profile_focus is not None:
+        user.profile_focus = settings.profile_focus
 
     db.commit()
     db.refresh(user)

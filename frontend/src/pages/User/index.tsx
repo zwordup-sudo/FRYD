@@ -51,7 +51,13 @@ const translations = {
     version: "Versión",
     stack: "Stack",
     philosophy: "Filosofía",
-    changeAvatarColor: "Color de Perfil"
+    changeAvatarColor: "Color de Perfil",
+    focusLabel: "Enfoque de Cuenta",
+    focusDesc: "Personaliza las pestañas y herramientas visibles",
+    personal: "Personal",
+    trabajo: "Trabajo",
+    estudiante: "Estudiante",
+    empleado: "Empleado"
   },
   en: {
     profile: "My Profile",
@@ -76,6 +82,12 @@ const translations = {
     langDesc: "Interface language",
     aiLabel: "AI Assistant",
     aiDesc: "Default AI provider",
+    focusLabel: "Account Focus",
+    focusDesc: "Customize visible tabs and tools",
+    personal: "Personal",
+    trabajo: "Work",
+    estudiante: "Student",
+    empleado: "Employee",
     whatsappTitle: "WhatsApp Integration",
     whatsappDesc: "Reminders & Task Bot",
     whatsappDetails: "Receive notifications of pending tasks and chat with FRYD directly on WhatsApp using Twilio API.",
@@ -136,6 +148,7 @@ export default function UserPage() {
     return localStorage.getItem("fryd_theme") !== "light";
   });
   const [aiProvider, setAiProvider] = useState("ollama");
+  const [profileFocus, setProfileFocus] = useState("personal");
 
   // Sync state from user object when loaded
   useEffect(() => {
@@ -145,6 +158,7 @@ export default function UserPage() {
       setSandboxCode(user.whatsapp_sandbox || "");
       setUsernameInput(user.username || "");
       setAiProvider(user.ai_provider || "ollama");
+      setProfileFocus(user.profile_focus || "personal");
     }
   }, [user]);
 
@@ -171,6 +185,19 @@ export default function UserPage() {
       }
     } catch (err) {
       console.error("Error saving AI provider preference:", err);
+    }
+  };
+
+  // Sync profile focus selection to backend
+  const handleProfileFocusChange = async (focusVal: string) => {
+    setProfileFocus(focusVal);
+    try {
+      await updateUserSettings({ profile_focus: focusVal });
+      if (updateUser) {
+        updateUser({ profile_focus: focusVal });
+      }
+    } catch (err) {
+      console.error("Error saving profile focus preference:", err);
     }
   };
 
@@ -491,6 +518,26 @@ export default function UserPage() {
                   <option value="openai">🤖 OpenAI</option>
                   <option value="anthropic">🧠 Anthropic</option>
                   <option value="gemini">✨ Gemini</option>
+                </select>
+              </div>
+
+              <div className="border-t border-[var(--color-border-subtle)]" />
+
+              {/* Account Focus selector */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">{t.focusLabel}</p>
+                  <p className="text-xs text-[var(--color-text-muted)]">{t.focusDesc}</p>
+                </div>
+                <select
+                  value={profileFocus}
+                  onChange={(e) => handleProfileFocusChange(e.target.value)}
+                  className="bg-[var(--color-surface-input)] border border-[var(--color-border-default)] rounded-lg text-xs text-[var(--color-text-primary)] px-2.5 py-1.5 font-medium focus:ring-[var(--color-accent-primary)] cursor-pointer"
+                >
+                  <option value="personal">🏠 {t.personal}</option>
+                  <option value="trabajo">💼 {t.trabajo}</option>
+                  <option value="estudiante">🎓 {t.estudiante}</option>
+                  <option value="empleado">👔 {t.empleado}</option>
                 </select>
               </div>
             </div>

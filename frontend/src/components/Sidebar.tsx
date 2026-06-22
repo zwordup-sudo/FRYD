@@ -112,8 +112,17 @@ const menuItems = [
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
   const location = useLocation();
-  const { language } = useAuth();
+  const { language, user } = useAuth();
   const t = language === "en" ? translations.en : translations.es;
+  const focus = user?.profile_focus || "personal";
+
+  const filteredMenuItems = menuItems.filter((item) => {
+    if (focus === "personal") {
+      // Ocultar proyectos en perfil personal
+      if (item.nameKey === "Proyectos") return false;
+    }
+    return true;
+  });
 
   return (
     <>
@@ -154,7 +163,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-2 flex flex-col gap-1">
-          {menuItems.map((item) => {
+          {filteredMenuItems.map((item) => {
             const isActive = location.pathname === item.path;
             const displayName = t[item.nameKey as keyof typeof t] || item.nameKey;
 

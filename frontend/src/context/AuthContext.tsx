@@ -11,6 +11,7 @@ interface User {
   ai_provider?: string | null;
   ai_model?: string | null;
   ai_api_key?: string | null;
+  profile_focus?: string | null;
 }
 
 interface AuthContextType {

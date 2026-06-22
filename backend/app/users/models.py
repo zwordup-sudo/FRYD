@@ -20,6 +20,7 @@ class User(Base):
     ai_provider = Column(String, default="ollama", nullable=True)
     ai_model = Column(String, default="llama3", nullable=True)
     _ai_api_key = Column("ai_api_key", String, nullable=True)
+    profile_focus = Column(String, default="personal", nullable=True)
 
     # Relationships
     tasks = relationship("Task", back_populates="user", cascade="all, delete-orphan")

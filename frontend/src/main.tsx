@@ -15,8 +15,12 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
+import { setupOfflineSync } from "./services/offlineSync";
 
 import "./index.css";
+
+// Setup offline interceptors
+setupOfflineSync();
 
 const router = createBrowserRouter([
   {
@@ -55,3 +59,12 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
     </AuthProvider>
   </React.StrictMode>
 );
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((reg) => console.log("Service Worker registrado con éxito:", reg.scope))
+      .catch((err) => console.error("Error al registrar Service Worker:", err));
+  });
+}
