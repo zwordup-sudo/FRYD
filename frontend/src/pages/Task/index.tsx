@@ -68,6 +68,15 @@ export default function TaskPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
+  const loadTasks = async () => {
+    try {
+      const data = await getTasks();
+      setTasks(data);
+    } catch {
+      setErrorMessage("Error al cargar tareas");
+    }
+  };
+
   useEffect(() => {
     loadTasks();
   }, []);
@@ -81,15 +90,6 @@ export default function TaskPage() {
       return () => clearTimeout(timer);
     }
   }, [successMessage, errorMessage]);
-
-  const loadTasks = async () => {
-    try {
-      const data = await getTasks();
-      setTasks(data);
-    } catch {
-      setErrorMessage("Error al cargar tareas");
-    }
-  };
 
   const resetForm = () => {
     setForm({ title: "", description: "", due_date: "", status: "pending" });

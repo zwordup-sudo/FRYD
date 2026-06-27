@@ -30,10 +30,6 @@ export default function HomePage() {
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [errorMessage, setErrorMessage] = useState("");
 
-  useEffect(() => {
-    loadDashboard();
-  }, []);
-
   const loadDashboard = async () => {
     try {
       const [tasksData, habitsData, diaryData] = await Promise.all([
@@ -48,6 +44,10 @@ export default function HomePage() {
       setErrorMessage("Error al cargar el resumen de FRYD");
     }
   };
+
+  useEffect(() => {
+    loadDashboard();
+  }, []);
 
   const pendingTasks = tasks.filter((t) => t.status !== "completed").length;
   const completedTasks = tasks.filter((t) => t.status === "completed").length;

@@ -260,10 +260,6 @@ export default function UserPage() {
     }
   };
 
-  useEffect(() => {
-    loadStats();
-  }, []);
-
   const loadStats = async () => {
     try {
       const [tasks, habits, entries] = await Promise.all([
@@ -282,6 +278,10 @@ export default function UserPage() {
       // Silent fail
     }
   };
+
+  useEffect(() => {
+    loadStats();
+  }, []);
 
   const completionRate = stats.totalTasks > 0
     ? Math.round((stats.completedTasks / stats.totalTasks) * 100)

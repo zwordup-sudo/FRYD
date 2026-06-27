@@ -36,7 +36,6 @@ interface KanbanBoardProps {
 export default function KanbanBoard({
   columns,
   tasks,
-  members: _members,
   onMoveTask,
   onEditTask,
   onAddTask,
