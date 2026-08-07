@@ -23,7 +23,6 @@ def upgrade() -> None:
     with op.batch_alter_table('diary', schema=None) as batch_op:
         batch_op.alter_column('created_at', existing_type=sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP'))
         batch_op.alter_column('updated_at', existing_type=sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP'))
-        batch_op.create_index(batch_op.f('ix_diary_id'), ['id'], unique=False)
 
     with op.batch_alter_table('habits', schema=None) as batch_op:
         batch_op.add_column(sa.Column('updated_at', sa.DateTime(), nullable=False, server_default=sa.text('CURRENT_TIMESTAMP')))

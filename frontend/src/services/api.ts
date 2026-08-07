@@ -31,6 +31,11 @@ export const loginUser = async (credentials: any) => {
   return data;
 };
 
+export const loginWithGoogle = async (googleData: { id_token: string; email?: string; name?: string }) => {
+  const { data } = await api.post("/users/login/google", googleData);
+  return data;
+};
+
 export const getMe = async () => {
   const { data } = await api.get("/users/me");
   return data;
@@ -353,6 +358,17 @@ export const getProjectAnalytics = async (projectId: number) => {
 
 export const getProjectAICoach = async (projectId: number) => {
   const { data } = await api.post(`/projects/${projectId}/ai-coach`);
+  return data;
+};
+
+// ADMIN OPERATIONS
+export const adminListUsers = async () => {
+  const { data } = await api.get("/users/admin/users");
+  return data;
+};
+
+export const adminToggleAdmin = async (userId: number) => {
+  const { data } = await api.post(`/users/admin/toggle-admin/${userId}`);
   return data;
 };
 

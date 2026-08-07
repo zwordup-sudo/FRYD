@@ -17,7 +17,8 @@ const translations = {
     "Proyectos": "Proyectos",
     "Mi Perfil": "Mi Perfil",
     "Configuración": "Configuración",
-    "Productivity": "Productividad"
+    "Productivity": "Productividad",
+    "Panel Admin": "Panel Admin"
   },
   en: {
     "Inicio": "Home",
@@ -29,7 +30,8 @@ const translations = {
     "Proyectos": "Projects",
     "Mi Perfil": "My Profile",
     "Configuración": "Settings",
-    "Productivity": "Productivity"
+    "Productivity": "Productivity",
+    "Panel Admin": "Admin Panel"
   }
 };
 
@@ -108,6 +110,16 @@ const menuItems = [
       </svg>
     ),
   },
+  {
+    nameKey: "Panel Admin",
+    path: "/admin",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="10" rx="2" />
+        <path d="M12 2v9M8 5h8" />
+      </svg>
+    ),
+  },
 ];
 
 const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
@@ -120,6 +132,9 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
     if (focus === "personal") {
       // Ocultar proyectos en perfil personal
       if (item.nameKey === "Proyectos") return false;
+    }
+    if (item.nameKey === "Panel Admin" && !user?.is_admin) {
+      return false;
     }
     return true;
   });

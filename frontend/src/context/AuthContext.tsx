@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { getMe, loginUser, registerUser } from "../services/api";
+import { getMe, loginUser, registerUser, loginWithGoogle } from "../services/api";
 
 interface User {
   id: number;
@@ -12,6 +12,7 @@ interface User {
   ai_model?: string | null;
   ai_api_key?: string | null;
   profile_focus?: string | null;
+  is_admin?: boolean;
 }
 
 interface AuthContextType {
@@ -19,6 +20,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (credentials: any) => Promise<User>;
+  loginGoogle: (googleData: { id_token: string; email?: string; name?: string }) => Promise<User>;
   register: (userData: any) => Promise<User>;
   logout: () => void;
   updateUser: (updatedUser: Partial<User>) => void;
@@ -79,7 +81,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw error;
     }
   };
-
+  const loginGoogle = async (googleData: { id_token: string; email?: string; name?: string }) => {
+    try {
+      const response = await loginWithGoogle(googleData);
+      const { access_token } = response;
+      localStorage.setItem("token", access_token);
+      setToken(access_token);
+      
+      const profile = await getMe();
+      setUser(profile);
+      return profile;
+    } catch (error) {
+      console.error("Google Login failed:", error);
+      throw error;
+    }
+  };
   const register = async (userData: any) => {
     try {
       await registerUser(userData);
@@ -105,7 +121,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout, updateUser, language, changeLanguage }}>
+    <AuthContext.Provider value={{ user, token, loading, login, loginGoogle, register, logout, updateUser, language, changeLanguage }}>
       {children}
     </AuthContext.Provider>
   );

@@ -2,8 +2,12 @@ import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
-const ProtectedRoute: React.FC = () => {
-  const { token, loading } = useAuth();
+interface ProtectedRouteProps {
+  requireAdmin?: boolean;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ requireAdmin = false }) => {
+  const { token, user, loading } = useAuth();
 
   if (loading) {
     return (
@@ -18,6 +22,10 @@ const ProtectedRoute: React.FC = () => {
 
   if (!token) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requireAdmin && !user?.is_admin) {
+    return <Navigate to="/" replace />;
   }
 
   return <Outlet />;

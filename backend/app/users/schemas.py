@@ -22,6 +22,7 @@ class UserRead(BaseModel):
     ai_model: str | None = "llama3"
     ai_api_key: str | None = None
     profile_focus: str | None = "personal"
+    is_admin: bool = False
 
     model_config = ConfigDict(from_attributes=True)
 

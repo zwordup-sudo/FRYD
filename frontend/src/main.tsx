@@ -13,6 +13,7 @@ import UserPage from "./pages/User";
 import ProjectsPage from "./pages/Projects";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import AdminPanel from "./pages/AdminPanel";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { AuthProvider } from "./context/AuthContext";
 import { setupOfflineSync } from "./services/offlineSync";
@@ -50,13 +51,31 @@ const router = createHashRouter([
       },
     ],
   },
+  {
+    element: <ProtectedRoute requireAdmin={true} />,
+    children: [
+      {
+        path: "/",
+        element: <MainLayout />,
+        children: [
+          { path: "admin", element: <AdminPanel /> },
+        ],
+      },
+    ],
+  },
 ]);
+
+import { GoogleOAuthProvider } from "@react-oauth/google";
+
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
+    <GoogleOAuthProvider clientId={googleClientId}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </GoogleOAuthProvider>
   </React.StrictMode>
 );
 
