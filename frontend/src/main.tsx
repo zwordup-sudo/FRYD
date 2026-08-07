@@ -67,7 +67,7 @@ const router = createHashRouter([
 
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "";
+const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "1054531438689-snb44rge9qjgckdaqooil4h67kbklcbf.apps.googleusercontent.com";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
