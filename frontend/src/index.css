@@ -3724,3 +3724,299 @@ body {
     min-height: 0;
   }
 }
+
+/* ===== FRYD 2.0 — SIDEBAR / ITERATION 13 ===== */
+
+.fryd-sidebar {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 12% 2%, rgba(99, 102, 241, 0.13), transparent 13rem),
+    linear-gradient(180deg, rgba(9, 16, 31, 0.985), rgba(7, 13, 26, 0.995));
+  border-right: 1px solid rgba(129, 140, 248, 0.16);
+  box-shadow: 18px 0 50px rgba(2, 6, 23, 0.18);
+}
+
+.fryd-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  z-index: 2;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.85), rgba(59, 130, 246, 0.56), rgba(20, 184, 166, 0.24), transparent 88%);
+}
+
+.fryd-sidebar::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 1px;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(129, 140, 248, 0.32), rgba(59, 130, 246, 0.10) 35%, rgba(20, 184, 166, 0.06) 72%, transparent);
+  pointer-events: none;
+}
+
+.fryd-sidebar-ambient {
+  position: absolute;
+  width: 13rem;
+  height: 13rem;
+  right: -8rem;
+  top: 6.5rem;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.10);
+  filter: blur(65px);
+  pointer-events: none;
+}
+
+.fryd-sidebar-brand {
+  display: flex;
+  align-items: center;
+  min-height: 3.25rem;
+}
+
+.fryd-sidebar-section-label {
+  font-size: 0.66rem;
+  line-height: 1;
+  font-weight: 750;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #8b8dfb;
+}
+
+.fryd-sidebar-section-dot {
+  width: 0.28rem;
+  height: 0.28rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #6366f1;
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.55);
+  opacity: 0.86;
+}
+
+.fryd-sidebar-item {
+  position: relative;
+  min-height: 2.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.78rem;
+  padding: 0.42rem 0.75rem 0.42rem 0.8rem;
+  border: 1px solid transparent;
+  border-radius: 0.82rem;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.fryd-sidebar-item:hover {
+  color: var(--color-text-primary);
+  background: rgba(255, 255, 255, 0.028);
+  border-color: rgba(148, 163, 184, 0.07);
+  transform: translateX(1px);
+}
+
+.fryd-sidebar-item.is-active {
+  color: #f8fafc;
+  background:
+    linear-gradient(90deg, rgba(99, 102, 241, 0.13), rgba(59, 130, 246, 0.045) 62%, rgba(20, 184, 166, 0.02)),
+    rgba(15, 25, 46, 0.86);
+  border-color: rgba(129, 140, 248, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.025),
+    0 8px 24px rgba(2, 6, 23, 0.14);
+}
+
+.fryd-sidebar-active-line {
+  position: absolute;
+  left: -1px;
+  top: 0.5rem;
+  bottom: 0.5rem;
+  width: 2px;
+  border-radius: 0 99px 99px 0;
+  opacity: 0;
+  transform: scaleY(0.35);
+  transform-origin: center;
+  background: linear-gradient(180deg, #60a5fa 0%, #6366f1 55%, #22d3ee 100%);
+  box-shadow: 0 0 10px rgba(96, 165, 250, 0.48);
+  transition: opacity var(--transition-fast), transform var(--transition-fast);
+}
+
+.fryd-sidebar-item.is-active .fryd-sidebar-active-line {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.fryd-sidebar-icon {
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 0.62rem;
+  color: #8996b1;
+  background: rgba(148, 163, 184, 0.045);
+  border: 1px solid rgba(148, 163, 184, 0.075);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.fryd-sidebar-icon svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.fryd-sidebar-item:hover .fryd-sidebar-icon {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.075);
+  border-color: rgba(129, 140, 248, 0.12);
+}
+
+.fryd-sidebar-item.is-active .fryd-sidebar-icon {
+  color: #eef2ff;
+  background: linear-gradient(145deg, rgba(99, 102, 241, 0.86), rgba(67, 56, 202, 0.68));
+  border-color: rgba(165, 180, 252, 0.24);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 18px rgba(99, 102, 241, 0.22);
+  transform: translateY(-1px);
+}
+
+.fryd-sidebar-item-label {
+  min-width: 0;
+  font-size: 0.865rem;
+  line-height: 1.15;
+  font-weight: 520;
+  letter-spacing: -0.01em;
+}
+
+.fryd-sidebar-item.is-active .fryd-sidebar-item-label {
+  font-weight: 650;
+}
+
+.fryd-sidebar-profile {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.78rem;
+  padding: 0.78rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(129, 140, 248, 0.11);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.09), transparent 8rem),
+    rgba(16, 26, 47, 0.78);
+  color: inherit;
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  transition: background var(--transition-fast), border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.fryd-sidebar-profile:hover,
+.fryd-sidebar-profile.is-active {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(99, 102, 241, 0.14), transparent 8rem),
+    rgba(18, 29, 53, 0.94);
+  border-color: rgba(129, 140, 248, 0.24);
+  box-shadow: 0 10px 28px rgba(2, 6, 23, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.fryd-sidebar-profile:hover {
+  transform: translateY(-1px);
+}
+
+.fryd-sidebar-avatar {
+  width: 2.55rem;
+  height: 2.55rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  padding: 1px;
+  color: #fff;
+  background: var(--brand-gradient);
+  box-shadow: 0 0 22px rgba(99, 102, 241, 0.17);
+}
+
+.fryd-sidebar-avatar span {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  font-size: 0.86rem;
+  font-weight: 750;
+  background: linear-gradient(145deg, rgba(58, 45, 192, 0.72), rgba(24, 77, 169, 0.52), rgba(10, 104, 105, 0.55));
+}
+
+.fryd-sidebar-role {
+  padding: 0.12rem 0.38rem;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  line-height: 1.2;
+  font-weight: 700;
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(129, 140, 248, 0.16);
+}
+
+.fryd-sidebar-profile-chevron {
+  flex: 0 0 auto;
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+.fryd-sidebar-profile:hover .fryd-sidebar-profile-chevron {
+  color: #a5b4fc;
+  transform: translateX(2px);
+}
+
+.fryd-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.22) transparent;
+}
+
+.fryd-sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.fryd-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.fryd-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.18);
+}
+
+:root.light .fryd-sidebar {
+  background:
+    radial-gradient(circle at 10% 0%, rgba(99, 102, 241, 0.07), transparent 13rem),
+    linear-gradient(180deg, rgba(250, 251, 255, 0.99), rgba(246, 248, 252, 0.995));
+  border-right-color: rgba(99, 102, 241, 0.12);
+  box-shadow: 14px 0 42px rgba(15, 23, 42, 0.05);
+}
+
+:root.light .fryd-sidebar-item.is-active {
+  color: #1e293b;
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.11), rgba(59, 130, 246, 0.04));
+  border-color: rgba(99, 102, 241, 0.10);
+}
+
+:root.light .fryd-sidebar-icon {
+  color: #64748b;
+  background: rgba(99, 102, 241, 0.035);
+  border-color: rgba(99, 102, 241, 0.07);
+}
+
+:root.light .fryd-sidebar-profile {
+  background: rgba(255, 255, 255, 0.76);
+  border-color: rgba(99, 102, 241, 0.10);
+}
