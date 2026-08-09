@@ -9,8 +9,9 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "electron:start": "electron .",
-    "electron:build": "npm run build && electron-packager . FRYD --platform=win32 --arch=x64 --out=dist-desktop-v2 --overwrite"
+    "electron:start": "npm run build && electron .",
+    "electron:build": "npm run build && electron-packager . FRYD --platform=win32 --arch=x64 --out=dist-desktop-v2 --overwrite",
+    "electron:run": "electron ."
   },
   "dependencies": {
     "@capacitor/android": "^8.4.1",

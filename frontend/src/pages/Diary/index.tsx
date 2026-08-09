@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   getDiaryEntries,
   createDiaryEntry,
@@ -7,6 +9,9 @@ import {
   extractTasksFromDiary,
 } from "../../services/api";
 import DiaryTaskExtractorModal from "../../components/DiaryTaskExtractorModal";
+import Modal from "../../components/ui/Modal";
+import PageHeader from "../../components/ui/PageHeader";
+import StatTile from "../../components/ui/StatTile";
 
 type DiaryEntry = {
   id: number;
@@ -19,60 +24,117 @@ type DiaryEntry = {
   updated_at: string;
 };
 
-const moodConfig: Record<string, { emoji: string; label: string; color: string }> = {
-  happy: { emoji: "😊", label: "Feliz", color: "var(--color-accent-primary)" },
-  sad: { emoji: "😢", label: "Triste", color: "var(--color-accent-info)" },
-  annoyed: { emoji: "😤", label: "Molesto", color: "var(--color-accent-danger)" },
-  excited: { emoji: "🤩", label: "Emocionado", color: "var(--color-accent-warning)" },
-  neutral: { emoji: "😐", label: "Neutral", color: "var(--color-text-secondary)" },
-  stressed: { emoji: "😰", label: "Estresado", color: "var(--color-accent-tertiary)" },
-  calm: { emoji: "😌", label: "Calmado", color: "var(--color-accent-secondary)" },
+type DiaryForm = {
+  title: string;
+  content: string;
+  mood: string;
+  energy_level: number;
+  tags: string;
+};
+
+type MoodConfig = {
+  emoji: string;
+  label: string;
+  color: string;
+  soft: string;
+};
+
+const moodConfig: Record<string, MoodConfig> = {
+  happy: { emoji: "😊", label: "Feliz", color: "#34d399", soft: "rgba(52, 211, 153, 0.12)" },
+  sad: { emoji: "😢", label: "Triste", color: "#38bdf8", soft: "rgba(56, 189, 248, 0.12)" },
+  annoyed: { emoji: "😤", label: "Molesto", color: "#f87171", soft: "rgba(248, 113, 113, 0.12)" },
+  excited: { emoji: "🤩", label: "Emocionado", color: "#fbbf24", soft: "rgba(251, 191, 36, 0.12)" },
+  neutral: { emoji: "😐", label: "Neutral", color: "#94a3b8", soft: "rgba(148, 163, 184, 0.10)" },
+  stressed: { emoji: "😰", label: "Estresado", color: "#a78bfa", soft: "rgba(167, 139, 250, 0.12)" },
+  calm: { emoji: "😌", label: "Calmado", color: "#14b8a6", soft: "rgba(20, 184, 166, 0.12)" },
 };
 
 const energyLabels = ["", "Muy baja", "Baja", "Normal", "Alta", "Muy alta"];
+const emptyForm: DiaryForm = {
+  title: "",
+  content: "",
+  mood: "neutral",
+  energy_level: 3,
+  tags: "",
+};
 
-const formatDate = (dateStr: string) => {
+const formatEntryDate = (dateStr: string) => {
   const date = new Date(dateStr);
   return date.toLocaleDateString("es-MX", {
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
+    month: "long",
   });
 };
 
+const formatEntryTime = (dateStr: string) =>
+  new Date(dateStr).toLocaleTimeString("es-MX", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+const formatShortDate = (dateStr: string) =>
+  new Date(dateStr).toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+  });
+
+const isWithinLastDays = (dateStr: string, days: number) => {
+  const date = new Date(dateStr);
+  const limit = new Date();
+  limit.setHours(0, 0, 0, 0);
+  limit.setDate(limit.getDate() - (days - 1));
+  return date >= limit;
+};
+
+const isCurrentMonth = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const now = new Date();
+  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+};
+
+const PlusIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden="true">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+);
+
+const BookIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
+  </svg>
+);
+
+const SparkIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="m12 3-1.1 3.1a4 4 0 0 1-2.5 2.5L5.3 9.7l3.1 1.1a4 4 0 0 1 2.5 2.5L12 16.4l1.1-3.1a4 4 0 0 1 2.5-2.5l3.1-1.1-3.1-1.1a4 4 0 0 1-2.5-2.5L12 3Z" />
+    <path d="m18 15-.55 1.55a2 2 0 0 1-1.25 1.25l-1.55.55 1.55.55a2 2 0 0 1 1.25 1.25L18 21.7l.55-1.55a2 2 0 0 1 1.25-1.25l1.55-.55-1.55-.55a2 2 0 0 1-1.25-1.25L18 15Z" />
+  </svg>
+);
+
+const MoreIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <circle cx="5" cy="12" r="1.7" /><circle cx="12" cy="12" r="1.7" /><circle cx="19" cy="12" r="1.7" />
+  </svg>
+);
+
 export default function DiaryPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [form, setForm] = useState({
-    title: "",
-    content: "",
-    mood: "neutral",
-    energy_level: 3,
-    tags: "",
-  });
+  const [form, setForm] = useState<DiaryForm>(emptyForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const [moodFilter, setMoodFilter] = useState("all");
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   const [extractedTasks, setExtractedTasks] = useState<any[]>([]);
   const [showExtractorModal, setShowExtractorModal] = useState(false);
   const [extractingId, setExtractingId] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetchEntries();
-  }, []);
-
-  useEffect(() => {
-    if (successMessage || errorMessage) {
-      const timer = setTimeout(() => {
-        setSuccessMessage("");
-        setErrorMessage("");
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage, errorMessage]);
 
   const fetchEntries = async () => {
     try {
@@ -83,13 +145,90 @@ export default function DiaryPage() {
     }
   };
 
+  useEffect(() => {
+    fetchEntries();
+  }, []);
+
+  useEffect(() => {
+    if (!successMessage && !errorMessage) return;
+    const timer = setTimeout(() => {
+      setSuccessMessage("");
+      setErrorMessage("");
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [successMessage, errorMessage]);
+
+  useEffect(() => {
+    const routeState = location.state as { openCreate?: boolean } | null;
+    if (routeState?.openCreate) {
+      setForm(emptyForm);
+      setEditingId(null);
+      setShowModal(true);
+      navigate(location.pathname, { replace: true, state: null });
+    }
+  }, [location.state, location.pathname, navigate]);
+
+  useEffect(() => {
+    if (openMenuId === null) return;
+    const close = () => setOpenMenuId(null);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [openMenuId]);
+
+  const filteredEntries = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return entries.filter((entry) => {
+      const matchesMood = moodFilter === "all" || (entry.mood || "neutral") === moodFilter;
+      if (!matchesMood) return false;
+      if (!normalizedQuery) return true;
+      const searchable = [
+        entry.title || "",
+        entry.content || "",
+        ...(entry.tags || []),
+        moodConfig[entry.mood || "neutral"]?.label || "",
+      ]
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+  }, [entries, moodFilter, query]);
+
+  const recentEntries = useMemo(() => entries.filter((entry) => isWithinLastDays(entry.created_at, 7)), [entries]);
+  const monthEntries = useMemo(() => entries.filter((entry) => isCurrentMonth(entry.created_at)), [entries]);
+  const latestEntry = entries[0] || null;
+
+  const averageEnergy = useMemo(() => {
+    const values = recentEntries
+      .map((entry) => Number(entry.energy_level || 0))
+      .filter((value) => value > 0);
+    if (!values.length) return 0;
+    return values.reduce((sum, value) => sum + value, 0) / values.length;
+  }, [recentEntries]);
+
+  const dominantMood = useMemo(() => {
+    if (!recentEntries.length) return null;
+    const counts = recentEntries.reduce<Record<string, number>>((acc, entry) => {
+      const mood = entry.mood || "neutral";
+      acc[mood] = (acc[mood] || 0) + 1;
+      return acc;
+    }, {});
+    const key = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+    return key ? moodConfig[key] || moodConfig.neutral : null;
+  }, [recentEntries]);
+
   const resetForm = () => {
-    setForm({ title: "", content: "", mood: "neutral", energy_level: 3, tags: "" });
+    setForm(emptyForm);
     setEditingId(null);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    resetForm();
   };
 
   const openCreate = () => {
     resetForm();
+    setErrorMessage("");
     setShowModal(true);
   };
 
@@ -102,15 +241,13 @@ export default function DiaryPage() {
       energy_level: entry.energy_level || 3,
       tags: entry.tags ? entry.tags.join(", ") : "",
     });
+    setOpenMenuId(null);
     setErrorMessage("");
-    setSuccessMessage("");
     setShowModal(true);
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setForm({ ...form, [event.target.name]: event.target.value });
   };
 
   const handleSubmit = async () => {
@@ -123,6 +260,7 @@ export default function DiaryPage() {
     }
 
     try {
+      const wasEditing = editingId !== null;
       const entryContent = form.content.trim();
       const payload = {
         title: form.title.trim() || null,
@@ -130,7 +268,7 @@ export default function DiaryPage() {
         mood: form.mood || "neutral",
         energy_level: Number(form.energy_level),
         tags: form.tags
-          ? form.tags.split(",").map((t) => t.trim()).filter((t) => t.length > 0)
+          ? form.tags.split(",").map((tag) => tag.trim()).filter(Boolean)
           : ["general"],
       };
 
@@ -139,36 +277,30 @@ export default function DiaryPage() {
         setSuccessMessage("Entrada actualizada");
       } else {
         await createDiaryEntry(payload);
-        setSuccessMessage("Entrada creada");
+        setSuccessMessage("Entrada guardada");
       }
 
-      resetForm();
-      setShowModal(false);
+      closeModal();
       fetchEntries();
 
-      // Trigger AI task extraction on new entries with content
-      if (!editingId && entryContent) {
+      if (!wasEditing && entryContent) {
         try {
           const prefs = JSON.parse(localStorage.getItem("fryd_assistant_prefs") || "{}");
           const activeProvider = prefs.provider;
           if (activeProvider) {
-            const apiKey = prefs.apiKey || null;
-            const model = prefs.model || null;
-            
             const detected = await extractTasksFromDiary({
               content: entryContent,
               provider: activeProvider,
-              model,
-              api_key: apiKey,
+              model: prefs.model || null,
+              api_key: prefs.apiKey || null,
             });
-
             if (detected && detected.length > 0) {
               setExtractedTasks(detected);
               setShowExtractorModal(true);
             }
           }
-        } catch (err) {
-          console.error("Error extracting tasks from entry:", err);
+        } catch (error) {
+          console.error("Error extracting tasks from entry:", error);
         }
       }
     } catch {
@@ -184,29 +316,26 @@ export default function DiaryPage() {
       const prefs = JSON.parse(localStorage.getItem("fryd_assistant_prefs") || "{}");
       const activeProvider = prefs.provider;
       if (!activeProvider) {
-        setErrorMessage("Configura un proveedor de IA en la pestaña Asistente primero.");
-        setExtractingId(null);
+        setErrorMessage("Configura un proveedor de IA en Cerebro Digital para analizar esta entrada.");
         return;
       }
-      const apiKey = prefs.apiKey || null;
-      const model = prefs.model || null;
 
       const detected = await extractTasksFromDiary({
         content,
         provider: activeProvider,
-        model,
-        api_key: apiKey,
+        model: prefs.model || null,
+        api_key: prefs.apiKey || null,
       });
 
       if (detected && detected.length > 0) {
         setExtractedTasks(detected);
         setShowExtractorModal(true);
       } else {
-        setSuccessMessage("La IA analizó el texto pero no detectó ninguna tarea.");
+        setSuccessMessage("FRYD analizó la entrada y no detectó tareas pendientes.");
       }
-    } catch (err: any) {
-      console.error(err);
-      setErrorMessage("Error al conectar con la IA. Asegúrate de tener una clave de API válida configurada.");
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("No se pudo conectar con la IA. Revisa la configuración de tu proveedor.");
     } finally {
       setExtractingId(null);
     }
@@ -216,333 +345,408 @@ export default function DiaryPage() {
     if (!confirm("¿Seguro que deseas eliminar esta entrada?")) return;
     try {
       await deleteDiaryEntry(id);
+      setOpenMenuId(null);
       if (editingId === id) resetForm();
       setSuccessMessage("Entrada eliminada");
       setShowModal(false);
       fetchEntries();
     } catch {
-      setErrorMessage("Error al eliminar");
+      setErrorMessage("Error al eliminar la entrada");
     }
   };
 
   return (
     <div className="animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Mi Diario</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            Registra tus pensamientos, emociones y energía diaria.
-          </p>
-        </div>
-        <button onClick={openCreate} className="btn-primary self-start sm:self-auto">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Nueva entrada
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="TU ESPACIO"
+        title="Mi diario"
+        description="Un lugar tranquilo para registrar lo que piensas, cómo te sientes y la energía con la que atraviesas cada día."
+        action={(
+          <button type="button" onClick={openCreate} className="btn-primary">
+            <PlusIcon /> Nueva entrada
+          </button>
+        )}
+      />
 
-      {/* Alerts */}
       {errorMessage && (
-        <div className="alert alert-error mb-4">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          {errorMessage}
+        <div className="alert alert-error mb-4" role="alert">
+          <span>!</span>{errorMessage}
         </div>
       )}
       {successMessage && (
-        <div className="alert alert-success mb-4">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
-          {successMessage}
+        <div className="alert alert-success mb-4" role="status">
+          <span>✓</span>{successMessage}
         </div>
       )}
 
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
-        <div className="card-static text-center py-4">
-          <p className="text-2xl font-bold text-[var(--color-accent-tertiary)]">{entries.length}</p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">Entradas</p>
-        </div>
-        <div className="card-static text-center py-4">
-          <p className="text-2xl">
-            {entries.length > 0
-              ? moodConfig[entries[0].mood || "neutral"]?.emoji || "😐"
-              : "—"}
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">Último ánimo</p>
-        </div>
-        <div className="card-static text-center py-4">
-          <p className="text-2xl font-bold text-[var(--color-accent-secondary)]">
-            {entries.length > 0 ? entries[0].energy_level ?? "—" : "—"}
-            <span className="text-sm text-[var(--color-text-muted)]">/5</span>
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-1">Última energía</p>
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3 gap-y-6 mb-9">
+        <StatTile
+          label="Este mes"
+          value={monthEntries.length}
+          detail={monthEntries.length === 1 ? "entrada guardada" : "entradas guardadas"}
+          icon={<BookIcon />}
+          tone="brand"
+        />
+        <StatTile
+          label="Ánimo reciente"
+          value={dominantMood ? `${dominantMood.emoji} ${dominantMood.label}` : "—"}
+          detail="Tendencia de los últimos 7 días"
+          icon={<span className="text-base">♡</span>}
+          tone="muted"
+        />
+        <StatTile
+          label="Energía media"
+          value={averageEnergy ? `${averageEnergy.toFixed(1)}/5` : "—"}
+          detail="Promedio de los últimos 7 días"
+          icon={<span className="text-base">⚡</span>}
+          tone={averageEnergy >= 4 ? "success" : averageEnergy > 0 && averageEnergy <= 2 ? "warning" : "brand"}
+        />
       </div>
 
-      {/* Timeline */}
-      <div className="relative">
-        {/* Timeline line */}
-        {entries.length > 1 && (
-          <div className="absolute left-[19px] top-8 bottom-8 w-px bg-[var(--color-border-default)] hidden sm:block" />
-        )}
+      <section className="fryd-diary-reflection mb-6">
+        <div className="fryd-diary-reflection-icon"><SparkIcon /></div>
+        <div className="min-w-0 flex-1">
+          <p className="fryd-section-label mb-1">MOMENTO DE REFLEXIÓN</p>
+          <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">¿Qué merece quedar escrito hoy?</h2>
+          <p className="text-sm text-[var(--color-text-secondary)] mt-1 max-w-2xl">
+            No necesitas escribir mucho. Una idea, una emoción o una pequeña victoria también cuentan.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={() => navigate("/assistant")} className="btn-secondary">
+            <SparkIcon /> Reflexionar con FRYD
+          </button>
+          <button type="button" onClick={openCreate} className="btn-brand-soft">
+            Escribir ahora
+          </button>
+        </div>
+      </section>
 
-        <div className="flex flex-col gap-6">
-          {entries.map((entry, i) => {
-            const mood = moodConfig[entry.mood || "neutral"] || moodConfig.neutral;
-            const isExpanded = expandedId === entry.id;
-            const energyPercent = ((entry.energy_level || 3) / 5) * 100;
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.8fr)_minmax(17rem,.72fr)] gap-x-5 gap-y-9 items-start">
+        <main className="min-w-0">
+          <div className="fryd-diary-toolbar mb-4">
+            <label className="fryd-search-field flex-1 min-w-0">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar en tus entradas..."
+                aria-label="Buscar en el diario"
+              />
+            </label>
+            <select
+              value={moodFilter}
+              onChange={(event) => setMoodFilter(event.target.value)}
+              className="fryd-select fryd-diary-mood-filter"
+              aria-label="Filtrar por estado de ánimo"
+            >
+              <option value="all">Todos los ánimos</option>
+              {Object.entries(moodConfig).map(([key, mood]) => (
+                <option key={key} value={key}>{mood.emoji} {mood.label}</option>
+              ))}
+            </select>
+          </div>
 
-            return (
-              <div
-                key={entry.id}
-                className="animate-slide-in-up flex gap-4"
-                style={{ animationDelay: `${i * 60}ms` }}
-              >
-                {/* Timeline dot */}
-                <div className="hidden sm:flex flex-col items-center flex-shrink-0 pt-5">
-                  <div
-                    className="w-[10px] h-[10px] rounded-full ring-2 ring-[var(--color-surface-base)] z-10"
-                    style={{ background: mood.color }}
-                  />
-                </div>
+          {filteredEntries.length > 0 ? (
+            <div className="fryd-diary-timeline">
+              {filteredEntries.map((entry, index) => {
+                const mood = moodConfig[entry.mood || "neutral"] || moodConfig.neutral;
+                const isExpanded = expandedId === entry.id;
+                const energy = Math.max(1, Math.min(5, Number(entry.energy_level || 3)));
 
-                {/* Card */}
-                <div className="flex-1 card-static group">
-                  {/* Header */}
-                  <div className="flex items-start gap-3">
-                    {/* Mood emoji */}
-                    <span className="text-2xl flex-shrink-0" title={mood.label}>
-                      {mood.emoji}
-                    </span>
+                return (
+                  <article
+                    key={entry.id}
+                    className="fryd-diary-entry animate-slide-in-up"
+                    style={{ animationDelay: `${index * 45}ms` }}
+                  >
+                    <div className="fryd-diary-date-rail" aria-hidden="true">
+                      <span>{new Date(entry.created_at).toLocaleDateString("es-MX", { day: "2-digit" })}</span>
+                      <small>{new Date(entry.created_at).toLocaleDateString("es-MX", { month: "short" }).replace(".", "")}</small>
+                    </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h3 className="font-semibold text-sm text-[var(--color-text-primary)]">
-                            {entry.title || "Sin título"}
-                          </h3>
-                          <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
-                            {formatDate(entry.created_at)}
-                          </p>
+                    <div className="fryd-diary-entry-card">
+                      <header className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3 min-w-0">
+                          <div className="fryd-diary-mood-orb" style={{ color: mood.color, background: mood.soft }} title={mood.label}>
+                            {mood.emoji}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs text-[var(--color-text-muted)] capitalize">
+                              {formatEntryDate(entry.created_at)} · {formatEntryTime(entry.created_at)}
+                            </p>
+                            <h3 className="mt-1 text-base sm:text-lg font-semibold tracking-[-0.015em] text-[var(--color-text-primary)]">
+                              {entry.title || "Un momento del día"}
+                            </h3>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-1.5">
-                          <span className="badge badge-purple text-[10px]" style={{ color: mood.color, background: `${mood.color}20` }}>
-                            {mood.label}
-                          </span>
+                        <div className="relative flex-shrink-0">
+                          <button
+                            type="button"
+                            className="btn-ghost p-2"
+                            aria-label="Más opciones"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setOpenMenuId(openMenuId === entry.id ? null : entry.id);
+                            }}
+                          >
+                            <MoreIcon />
+                          </button>
+                          {openMenuId === entry.id && (
+                            <div className="fryd-context-menu right-0 top-10" onClick={(event) => event.stopPropagation()}>
+                              <button type="button" onClick={() => openEdit(entry)}>Editar entrada</button>
+                              <button type="button" className="is-danger" onClick={() => handleDelete(entry.id)}>Eliminar</button>
+                            </div>
+                          )}
                         </div>
-                      </div>
+                      </header>
 
-                      {/* Content preview / full */}
                       {entry.content && (
-                        <div className="mt-2">
-                          <p className={`text-sm text-[var(--color-text-secondary)] ${!isExpanded ? "line-clamp-2" : ""}`}>
-                            {entry.content}
-                          </p>
-                          {entry.content.length > 150 && (
+                        <div className="mt-4">
+                          <p className={`fryd-diary-copy ${!isExpanded ? "line-clamp-4" : ""}`}>{entry.content}</p>
+                          {entry.content.length > 260 && (
                             <button
+                              type="button"
                               onClick={() => setExpandedId(isExpanded ? null : entry.id)}
-                              className="text-xs text-[var(--color-accent-primary)] hover:underline mt-1"
+                              className="mt-2 text-xs font-medium text-[var(--color-accent-secondary)] hover:text-[var(--color-accent-tertiary)] transition-colors"
                             >
-                              {isExpanded ? "Ver menos" : "Ver más"}
+                              {isExpanded ? "Mostrar menos" : "Seguir leyendo"}
                             </button>
                           )}
                         </div>
                       )}
 
-                      {/* Energy bar */}
-                      <div className="flex items-center gap-2 mt-3">
-                        <span className="text-xs text-[var(--color-text-muted)]">Energía</span>
-                        <div className="flex-1 max-w-[120px] h-1.5 bg-[var(--color-surface-input)] rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${energyPercent}%`,
-                              background: energyPercent >= 80 ? "var(--color-accent-primary)" : energyPercent >= 40 ? "var(--color-accent-warning)" : "var(--color-accent-danger)",
-                            }}
-                          />
-                        </div>
-                        <span className="text-xs font-medium text-[var(--color-text-secondary)]">
-                          {energyLabels[entry.energy_level || 3]}
-                        </span>
-                      </div>
-
-                      {/* Tags */}
-                      {entry.tags && entry.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                          {entry.tags.map((tag, idx) => (
-                            <span key={idx} className="badge badge-gray text-[10px] py-0.5">
-                              #{tag}
+                      <div className="fryd-diary-entry-footer">
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="fryd-diary-mood-chip" style={{ color: mood.color, background: mood.soft }}>
+                            {mood.emoji} {mood.label}
+                          </span>
+                          <span className="fryd-diary-energy-chip" title={`Energía: ${energyLabels[energy]}`}>
+                            <span>⚡</span>
+                            <span className="fryd-diary-energy-dots">
+                              {[1, 2, 3, 4, 5].map((level) => <i key={level} className={level <= energy ? "is-filled" : ""} />)}
                             </span>
+                            <small>{energy}/5</small>
+                          </span>
+                          {(entry.tags || []).map((tag) => (
+                            <span key={tag} className="badge badge-gray text-[10px]">#{tag}</span>
                           ))}
                         </div>
-                      )}
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-1 mt-3 opacity-60 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                         {entry.content && (
                           <button
+                            type="button"
                             onClick={() => handleExtractTasks(entry.content || "", entry.id)}
-                            className="btn-secondary text-xs py-1 px-2 flex items-center gap-1 cursor-pointer"
                             disabled={extractingId === entry.id}
+                            className="fryd-diary-ai-action"
                           >
-                            <span className="text-emerald-400">✨</span>
-                            {extractingId === entry.id ? "Analizando..." : "Sugerir Tareas"}
+                            <SparkIcon />
+                            {extractingId === entry.id ? "Analizando..." : "Convertir ideas en tareas"}
                           </button>
                         )}
-                        <button onClick={() => openEdit(entry)} className="btn-ghost text-xs py-1 px-2">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                          Editar
-                        </button>
-                        <button onClick={() => handleDelete(entry.id)} className="btn-danger text-xs py-1 px-2">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                          Eliminar
-                        </button>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {entries.length === 0 && (
-            <div className="empty-state py-16">
-              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                <path d="M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" />
-                <path d="M7 8h10M7 12h7M7 16h4" />
-              </svg>
-              <p className="text-sm font-medium text-[var(--color-text-secondary)] mt-2">
-                No hay entradas aún
+                  </article>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="empty-state fryd-diary-empty">
+              <div className="fryd-empty-brand-icon"><BookIcon /></div>
+              <h3 className="mt-4 text-base font-semibold text-[var(--color-text-primary)]">
+                {entries.length === 0 ? "Tu diario empieza aquí" : "No encontramos entradas"}
+              </h3>
+              <p className="mt-1 text-sm text-[var(--color-text-secondary)] max-w-md">
+                {entries.length === 0
+                  ? "Guarda una idea, una emoción o simplemente cómo estuvo tu día. No hace falta escribir mucho."
+                  : "Prueba con otra búsqueda o cambia el filtro de ánimo."}
               </p>
-              <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                Registra tu primer día en el diario
-              </p>
+              {entries.length === 0 && (
+                <button type="button" onClick={openCreate} className="btn-primary mt-5"><PlusIcon /> Primera entrada</button>
+              )}
             </div>
           )}
-        </div>
-      </div>
+        </main>
 
-      {/* Create/Edit Modal */}
-      {showModal && (
-        <div className="modal-overlay" onClick={() => { setShowModal(false); resetForm(); }}>
-          <div className="modal-content card-static" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">
-                {editingId ? "Editar entrada" : "Nueva entrada"}
-              </h2>
-              <button onClick={() => { setShowModal(false); resetForm(); }} className="btn-ghost p-1">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        <aside className="flex flex-col gap-4 xl:sticky xl:top-5">
+          <section className="fryd-side-card">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <div>
+                <p className="fryd-section-label mb-1">ÚLTIMOS 7 DÍAS</p>
+                <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Tu pulso reciente</h2>
+              </div>
+              <span className="fryd-diary-week-count">{recentEntries.length}</span>
+            </div>
+
+            <div className="fryd-diary-week-grid">
+              <div>
+                <strong>{recentEntries.length}</strong>
+                <small>entradas</small>
+              </div>
+              <div>
+                <strong>{averageEnergy ? averageEnergy.toFixed(1) : "—"}</strong>
+                <small>energía</small>
+              </div>
+              <div>
+                <strong>{dominantMood?.emoji || "—"}</strong>
+                <small>{dominantMood?.label || "sin datos"}</small>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-xs text-[var(--color-text-secondary)]">Energía registrada</span>
+                <span className="text-[10px] text-[var(--color-text-muted)]">más reciente →</span>
+              </div>
+              <div className="fryd-diary-energy-history">
+                {[...recentEntries].reverse().slice(-7).map((entry) => {
+                  const value = Math.max(1, Math.min(5, Number(entry.energy_level || 3)));
+                  return (
+                    <div key={entry.id} title={`${formatShortDate(entry.created_at)} · ${value}/5`}>
+                      <span style={{ height: `${Math.max(22, value * 18)}%` }} />
+                    </div>
+                  );
+                })}
+                {recentEntries.length === 0 && [1, 2, 3, 4, 5, 6, 7].map((item) => <div key={item}><span className="is-empty" style={{ height: "14%" }} /></div>)}
+              </div>
+            </div>
+          </section>
+
+          <section className="fryd-side-card">
+            <p className="fryd-section-label mb-3">ÚLTIMO REGISTRO</p>
+            {latestEntry ? (
+              <div>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">{(moodConfig[latestEntry.mood || "neutral"] || moodConfig.neutral).emoji}</span>
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{latestEntry.title || "Un momento del día"}</h3>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{formatShortDate(latestEntry.created_at)} · Energía {latestEntry.energy_level || 3}/5</p>
+                  </div>
+                </div>
+                {latestEntry.content && <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mt-3 line-clamp-3">{latestEntry.content}</p>}
+                <button type="button" onClick={() => openEdit(latestEntry)} className="btn-ghost text-xs mt-3 px-0">Continuar escribiendo →</button>
+              </div>
+            ) : (
+              <p className="text-sm text-[var(--color-text-secondary)]">Cuando escribas tu primera entrada, aparecerá aquí.</p>
+            )}
+          </section>
+
+          <section className="fryd-diary-insight">
+            <div className="fryd-diary-insight-icon"><SparkIcon /></div>
+            <div>
+              <p className="fryd-section-label mb-1">FRYD REFLEXIÓN</p>
+              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
+                {recentEntries.length >= 3 ? "Ya tienes suficiente contexto para observar patrones." : "La constancia revela patrones que un solo día no muestra."}
+              </h3>
+              <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed mt-2">
+                {recentEntries.length >= 3
+                  ? `Tu energía media reciente es ${averageEnergy.toFixed(1)}/5. Usa Cerebro Digital para conectar tu diario con tareas y hábitos.`
+                  : "Escribe algunas veces durante la semana y FRYD podrá ayudarte a relacionar ánimo, energía, tareas y hábitos."}
+              </p>
+              <button type="button" onClick={() => navigate("/assistant")} className="mt-4 text-xs font-semibold text-[var(--color-accent-secondary)] hover:text-[var(--color-accent-tertiary)] transition-colors">
+                Abrir Cerebro Digital →
               </button>
             </div>
+          </section>
+        </aside>
+      </div>
 
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Título</label>
-                <input
-                  name="title"
-                  placeholder="¿Cómo fue tu día?"
-                  value={form.title}
-                  onChange={handleChange}
-                  className="fryd-input"
-                  autoFocus
-                />
-              </div>
+      <Modal
+        open={showModal}
+        title={editingId ? "Editar reflexión" : "Nueva entrada"}
+        description={editingId ? "Actualiza lo que quieras conservar de este momento." : "Escribe con libertad. FRYD guardará el contexto para ayudarte a encontrar patrones después."}
+        icon={<BookIcon />}
+        onClose={closeModal}
+        footer={(
+          <>
+            <button type="button" onClick={closeModal} className="btn-secondary sm:min-w-28">Cancelar</button>
+            <button type="button" onClick={handleSubmit} className="btn-primary sm:min-w-36">
+              {editingId ? "Guardar cambios" : "Guardar entrada"}
+            </button>
+          </>
+        )}
+      >
+        <div className="space-y-5">
+          <div className="fryd-diary-writing-prompt">
+            <SparkIcon />
+            <span>Idea para empezar: ¿qué pasó hoy que no quieres olvidar?</span>
+          </div>
 
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Contenido</label>
-                <textarea
-                  name="content"
-                  placeholder="Escribe tus pensamientos, reflexiones o ideas..."
-                  value={form.content}
-                  onChange={handleChange}
-                  className="fryd-input min-h-[80px] resize-none"
-                  rows={3}
-                />
-              </div>
+          <label className="block">
+            <span className="fryd-field-label">Título <span>opcional</span></span>
+            <input
+              name="title"
+              placeholder="Ponle un nombre a este momento"
+              value={form.title}
+              onChange={handleChange}
+              className="fryd-input mt-1.5"
+              autoFocus
+            />
+          </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* Mood selector */}
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 block">Estado de ánimo</label>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(moodConfig).map(([key, config]) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => setForm({ ...form, mood: key })}
-                        className={`
-                          flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs
-                          transition-all duration-200 border
-                          ${
-                            form.mood === key
-                              ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-glow)] text-[var(--color-text-primary)] scale-105"
-                              : "border-[var(--color-border-default)] bg-[var(--color-surface-input)] text-[var(--color-text-secondary)] hover:border-[var(--color-border-accent)]"
-                          }
-                        `}
-                      >
-                        <span>{config.emoji}</span>
-                        <span className="text-[10px] font-medium">{config.label}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+          <label className="block">
+            <span className="fryd-field-label">Lo que quieres recordar <span>escribe todo lo que necesites</span></span>
+            <textarea
+              name="content"
+              placeholder="Pensamientos, ideas, emociones, decisiones, pequeñas victorias..."
+              value={form.content}
+              onChange={handleChange}
+              className="fryd-input fryd-diary-editor mt-1.5"
+              rows={7}
+            />
+          </label>
 
-                {/* Energy level */}
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 block">
-                    Energía: <span className="text-[var(--color-accent-primary)]">{energyLabels[form.energy_level]}</span>
-                  </label>
-                  <div className="flex gap-1.5">
-                    {[1, 2, 3, 4, 5].map((level) => (
-                      <button
-                        key={level}
-                        type="button"
-                        onClick={() => setForm({ ...form, energy_level: level })}
-                        className={`
-                          flex-1 py-2 rounded-lg text-xs font-semibold
-                          transition-all duration-200 border
-                          ${
-                            form.energy_level >= level
-                              ? "border-transparent text-[var(--color-text-inverse)]"
-                              : "border-[var(--color-border-default)] bg-[var(--color-surface-input)] text-[var(--color-text-muted)]"
-                          }
-                        `}
-                        style={form.energy_level >= level ? {
-                          background: level <= 2 ? "var(--color-accent-danger)" : level <= 3 ? "var(--color-accent-warning)" : "var(--color-accent-primary)",
-                          opacity: 0.6 + (level / 5) * 0.4,
-                        } : undefined}
-                      >
-                        {level}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Etiquetas</label>
-                <input
-                  name="tags"
-                  placeholder="reflexión, salud, ideas (separadas por coma)"
-                  value={form.tags}
-                  onChange={handleChange}
-                  className="fryd-input"
-                />
-              </div>
-
-              <div className="flex gap-2 mt-2">
-                <button onClick={handleSubmit} className="btn-primary flex-1">
-                  {editingId ? "Actualizar" : "Crear entrada"}
+          <div>
+            <span className="fryd-field-label">¿Cómo te sientes?</span>
+            <div className="fryd-diary-mood-picker mt-2">
+              {Object.entries(moodConfig).map(([key, mood]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setForm({ ...form, mood: key })}
+                  className={form.mood === key ? "is-selected" : ""}
+                  style={form.mood === key ? { borderColor: mood.color, background: mood.soft } : undefined}
+                >
+                  <span>{mood.emoji}</span>
+                  <small>{mood.label}</small>
                 </button>
-                <button onClick={() => { setShowModal(false); resetForm(); }} className="btn-secondary">
-                  Cancelar
-                </button>
-              </div>
+              ))}
             </div>
           </div>
+
+          <div>
+            <span className="fryd-field-label">Nivel de energía <span>{energyLabels[form.energy_level]}</span></span>
+            <div className="fryd-diary-energy-picker mt-2">
+              {[1, 2, 3, 4, 5].map((level) => (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setForm({ ...form, energy_level: level })}
+                  className={form.energy_level === level ? "is-selected" : ""}
+                >
+                  <span>{level}</span>
+                  <small>{energyLabels[level]}</small>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="block">
+            <span className="fryd-field-label">Etiquetas <span>separadas por coma</span></span>
+            <input
+              name="tags"
+              placeholder="personal, trabajo, gratitud, idea"
+              value={form.tags}
+              onChange={handleChange}
+              className="fryd-input mt-1.5"
+            />
+          </label>
         </div>
-      )}
-      {/* AI Task Extractor Modal */}
+      </Modal>
+
       {showExtractorModal && (
         <DiaryTaskExtractorModal
           tasks={extractedTasks}
@@ -550,8 +754,8 @@ export default function DiaryPage() {
             setShowExtractorModal(false);
             setExtractedTasks([]);
           }}
-          onSuccess={(msg) => setSuccessMessage(msg)}
-          onError={(msg) => setErrorMessage(msg)}
+          onSuccess={(message) => setSuccessMessage(message)}
+          onError={(message) => setErrorMessage(message)}
         />
       )}
     </div>

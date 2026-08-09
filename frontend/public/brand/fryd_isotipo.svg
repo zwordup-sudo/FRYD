@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 123 132">
+
+    <defs>
+      <linearGradient id="gTop" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#6366F1"/>
+        <stop offset="100%" stop-color="#7C3AED"/>
+      </linearGradient>
+      <linearGradient id="gMid" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#3B82F6"/>
+        <stop offset="100%" stop-color="#2563EB"/>
+      </linearGradient>
+      <linearGradient id="gBot" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#14B8A6"/>
+        <stop offset="100%" stop-color="#2DD4BF"/>
+      </linearGradient>
+    </defs>
+    
+
+    <g transform="translate(0,0) scale(1)">
+      <path d="M0 30 C0 13 13 0 30 0 H118 C122 0 124 3 123 7
+               C120 25 106 36 88 36 H30 C18 36 8 41 0 50 Z"
+            fill="url(#gTop)"/>
+      <path d="M0 78 C0 61 13 48 30 48 H88 C92 48 94 51 93 55
+               C90 72 77 84 60 84 H30 C18 84 8 89 0 98 Z"
+            fill="url(#gMid)"/>
+      <path d="M0 126 C0 109 13 96 30 96 H38 C42 96 44 99 43 103
+               C40 119 29 132 14 132 H0 Z"
+            fill="url(#gBot)"/>
+    </g>
+    
+</svg>

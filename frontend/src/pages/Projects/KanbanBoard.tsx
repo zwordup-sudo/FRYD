@@ -43,174 +43,143 @@ export default function KanbanBoard({
 }: KanbanBoardProps) {
   const handleDragEnd = (result: DropResult) => {
     const { destination, source, draggableId } = result;
-
     if (!destination) return;
-
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    const taskId = parseInt(draggableId, 10);
-    const newColumn = destination.droppableId;
-    
-    onMoveTask(taskId, newColumn);
+    if (destination.droppableId === source.droppableId && destination.index === source.index) return;
+    onMoveTask(parseInt(draggableId, 10), destination.droppableId);
   };
 
-  const getInitials = (name: string) => {
-    if (!name) return "?";
-    return name.substring(0, 2).toUpperCase();
-  };
+  const getInitials = (name: string) => (name ? name.substring(0, 2).toUpperCase() : "?");
+
+  const formatDate = (value: string) =>
+    new Date(value).toLocaleDateString("es-MX", { day: "numeric", month: "short" });
+
+  const isOverdue = (task: Task) =>
+    Boolean(task.due_date && !task.completed && new Date(task.due_date).getTime() < Date.now());
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-5 overflow-x-auto pb-4 min-h-[500px]">
-        {columns.map((columnName) => {
-          const columnTasks = tasks.filter((t) => t.column_name === columnName);
+      <div className="flex gap-4 overflow-x-auto pb-5 min-h-[520px] snap-x snap-mandatory">
+        {columns.map((columnName, columnIndex) => {
+          const columnTasks = tasks.filter((task) => task.column_name === columnName);
+          const completedCount = columnTasks.filter((task) => task.completed).length;
 
           return (
-            <div
-              key={columnName}
-              className="flex flex-col w-72 flex-shrink-0 rounded-2xl bg-white/[0.02] border border-[var(--color-border-default)] p-4 shadow-sm"
-            >
-              {/* Column Header */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-[var(--color-text-primary)]">
-                    {columnName}
-                  </span>
-                  <span className="flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold bg-white/[0.06] text-[var(--color-text-muted)]">
-                    {columnTasks.length}
-                  </span>
+            <section key={columnName} className="fryd-kanban-column snap-start">
+              <header className="flex items-start justify-between gap-3 mb-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="fryd-kanban-column-dot" data-index={columnIndex % 4} />
+                    <h3 className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{columnName}</h3>
+                    <span className="fryd-kanban-count">{columnTasks.length}</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5 pl-4">
+                    {completedCount > 0 ? `${completedCount} completada${completedCount === 1 ? "" : "s"}` : "Sin tareas completadas aquí"}
+                  </p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => onAddTask(columnName)}
-                  className="p-1 rounded-md text-[var(--color-text-muted)] hover:text-white hover:bg-white/[0.04] transition-all cursor-pointer"
-                  title="Añadir tarea"
+                  className="btn-ghost p-1.5 flex-shrink-0"
+                  title={`Añadir tarea a ${columnName}`}
+                  aria-label={`Añadir tarea a ${columnName}`}
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round">
                     <path d="M12 5v14M5 12h14" />
                   </svg>
                 </button>
-              </div>
+              </header>
 
-              {/* Droppable Area */}
               <Droppable droppableId={columnName}>
-                {(provided, snapshot) => {
-                  return (
-                    <div
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`flex-1 flex flex-col gap-3 min-h-[400px] rounded-xl transition-colors ${
-                        snapshot.isDraggingOver ? "bg-white/[0.01]" : ""
-                      }`}
-                    >
-                      {columnTasks.map((task, index) => (
-                        <Draggable
-                          key={task.id.toString()}
-                          draggableId={task.id.toString()}
-                          index={index}
-                        >
-                          {(provided, snapshot) => {
-                            return (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                {...provided.dragHandleProps}
-                                style={{
-                                  ...provided.draggableProps.style,
-                                }}
-                                className={`p-4 rounded-xl border bg-[var(--color-surface-card)] hover:border-white/10 hover:shadow-md transition-all ${
-                                  snapshot.isDragging
-                                    ? "border-[var(--color-accent-primary)] shadow-lg rotate-1 scale-[1.02]"
-                                    : task.completed
-                                    ? "border-emerald-500/20 bg-emerald-500/[0.01]"
-                                    : "border-[var(--color-border-default)]"
-                                }`}
-                              >
-                                <div className="flex items-start justify-between gap-2 mb-2">
-                                  <span
-                                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${
-                                      task.completed
-                                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                                        : "bg-white/[0.04] text-[var(--color-text-secondary)] border-[var(--color-border-default)]"
-                                    }`}
-                                  >
-                                    {task.story_points} SP
-                                  </span>
-
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-[10px] font-medium text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                                      +{task.xp_reward} XP
-                                    </span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        onEditTask(task);
-                                      }}
-                                      className="p-1 rounded hover:bg-white/[0.04] text-[var(--color-text-muted)] hover:text-white cursor-pointer"
-                                      title="Editar tarea"
-                                    >
-                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
-                                      </svg>
-                                    </button>
-                                  </div>
-                                </div>
-
-                                <h4 className={`text-sm font-semibold mb-1 line-clamp-2 ${task.completed ? "line-through text-[var(--color-text-muted)]" : "text-[var(--color-text-primary)]"}`}>
-                                  {task.title}
-                                </h4>
-
-                                {task.description && (
-                                  <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 mb-3">
-                                    {task.description}
-                                  </p>
-                                )}
-
-                                <div className="flex items-center justify-between pt-2 border-t border-white/[0.03]">
-                                  <span className="text-[9px] text-[var(--color-text-muted)]">
-                                    {task.due_date
-                                      ? `Vence: ${new Date(task.due_date).toLocaleDateString()}`
-                                      : "Sin fecha limite"}
-                                  </span>
-
-                                  <div className="flex items-center gap-2">
-                                    {task.assignee_username && (
-                                      <div
-                                        className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-[9px] font-extrabold text-white cursor-help"
-                                        title={`Asignada a ${task.assignee_username}`}
-                                      >
-                                        {getInitials(task.assignee_username)}
-                                      </div>
-                                    )}
-
-                                    {!task.completed && (
-                                      <button
-                                        onClick={() => onCompleteTask(task.id)}
-                                        className="p-1 rounded hover:bg-emerald-500/20 text-emerald-400 cursor-pointer"
-                                        title="Marcar completada"
-                                      >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                          <path d="M20 6L9 17l-5-5" />
-                                        </svg>
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
+                {(provided, snapshot) => (
+                  <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`fryd-kanban-dropzone ${snapshot.isDraggingOver ? "is-dragging-over" : ""}`}
+                  >
+                    {columnTasks.map((task, index) => (
+                      <Draggable key={task.id.toString()} draggableId={task.id.toString()} index={index}>
+                        {(provided, snapshot) => (
+                          <article
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            style={provided.draggableProps.style}
+                            className={`fryd-kanban-task ${task.completed ? "is-complete" : ""} ${snapshot.isDragging ? "is-dragging" : ""}`}
+                          >
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className="badge badge-purple text-[9px]">{task.story_points} SP</span>
+                                <span className="badge badge-blue text-[9px]">+{task.xp_reward} XP</span>
                               </div>
-                            );
-                          }}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </div>
-                  );
-                }}
+                              <button
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  onEditTask(task);
+                                }}
+                                className="btn-ghost p-1.5 -mr-1 -mt-1"
+                                title="Editar tarea"
+                                aria-label={`Editar ${task.title}`}
+                              >
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                                  <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z" />
+                                </svg>
+                              </button>
+                            </div>
+
+                            <h4 className={`text-sm font-semibold leading-snug ${task.completed ? "line-through text-[var(--color-text-muted)]" : "text-[var(--color-text-primary)]"}`}>
+                              {task.title}
+                            </h4>
+
+                            {task.description && (
+                              <p className="text-xs leading-relaxed text-[var(--color-text-secondary)] line-clamp-2 mt-1.5">
+                                {task.description}
+                              </p>
+                            )}
+
+                            <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-[var(--color-border-subtle)]">
+                              <span className={`inline-flex items-center gap-1.5 text-[10px] ${isOverdue(task) ? "text-[var(--color-accent-danger)]" : "text-[var(--color-text-muted)]"}`}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                                {task.due_date ? `${isOverdue(task) ? "Vencida" : "Vence"} ${formatDate(task.due_date)}` : "Sin fecha"}
+                              </span>
+
+                              <div className="flex items-center gap-2">
+                                {task.assignee_username && (
+                                  <div className="fryd-assignee-avatar" title={`Asignada a ${task.assignee_username}`}>
+                                    {getInitials(task.assignee_username)}
+                                  </div>
+                                )}
+                                {!task.completed && (
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      onCompleteTask(task.id);
+                                    }}
+                                    className="fryd-complete-task"
+                                    title="Marcar como completada"
+                                    aria-label={`Completar ${task.title}`}
+                                  >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M20 6L9 17l-5-5"/></svg>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </article>
+                        )}
+                      </Draggable>
+                    ))}
+                    {columnTasks.length === 0 && !snapshot.isDraggingOver && (
+                      <button type="button" onClick={() => onAddTask(columnName)} className="fryd-kanban-empty">
+                        <span>＋</span>
+                        <span>Añadir primera tarea</span>
+                      </button>
+                    )}
+                    {provided.placeholder}
+                  </div>
+                )}
               </Droppable>
-            </div>
+            </section>
           );
         })}
       </div>

@@ -1,8 +1,90 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../../context/AuthContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import axios from "axios";
+import { useAuth } from "../../context/AuthContext";
+import AuthShell from "../../components/auth/AuthShell";
+import Modal from "../../components/ui/Modal";
+
+const GoogleLogo = ({ className = "h-4 w-4" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
+    <path fill="#EA4335" d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.355 0 3.309 2.69 1.345 6.6l3.921 3.165z" />
+    <path fill="#34A853" d="M16.04 15.345c-1.127.737-2.44 1.182-4.04 1.182a7.077 7.077 0 0 1-6.734-4.855L1.345 14.84C3.309 18.755 7.355 21.445 12 21.445c3.09 0 5.927-1.027 8.036-2.79l-4.036-3.31z" />
+    <path fill="#4285F4" d="M23.49 12.273c0-.818-.082-1.609-.218-2.364H12v4.51h6.473c-.29 1.482-1.136 2.727-2.409 3.564l4.036 3.31c2.364-2.182 3.727-5.382 3.727-9.02z" />
+    <path fill="#FBBC05" d="M5.266 14.235A7.01 7.01 0 0 1 4.91 12c0-.79.136-1.555.355-2.235L1.345 6.6A11.968 11.968 0 0 0 0 12c0 1.927.455 3.755 1.255 5.4l4.01-3.165z" />
+  </svg>
+);
+
+const EyeIcon = ({ hidden }: { hidden: boolean }) => (
+  hidden ? (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+      <path d="M9.9 4.24A10.8 10.8 0 0 1 12 4c7 0 10 8 10 8a15 15 0 0 1-2.1 3.2" />
+      <path d="M6.2 6.2C3.3 8.1 2 12 2 12s3 8 10 8a10.9 10.9 0 0 0 5.8-1.7" />
+    </svg>
+  ) : (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3-8 10-8 10 8 10 8-3 8-10 8-10-8-10-8z" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  )
+);
+
+const focusOptions = [
+  {
+    id: "personal",
+    title: "Personal",
+    eyebrow: "Vida y bienestar",
+    description: "Hábitos, tareas diarias y diario reflexivo para construir un ritmo sostenible.",
+    accent: "teal",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="8" r="3.5" />
+        <path d="M5 21a7 7 0 0 1 14 0" />
+      </svg>
+    ),
+  },
+  {
+    id: "trabajo",
+    title: "Trabajo",
+    eyebrow: "Proyectos y equipo",
+    description: "Organiza proyectos, tareas compartidas y progreso con una vista de trabajo conectada.",
+    accent: "blue",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 12h18" />
+      </svg>
+    ),
+  },
+  {
+    id: "estudiante",
+    title: "Estudiante",
+    eyebrow: "Estudio y enfoque",
+    description: "Centraliza entregas, proyectos académicos y hábitos de estudio sin perder contexto.",
+    accent: "indigo",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+      </svg>
+    ),
+  },
+  {
+    id: "empleado",
+    title: "Empleado",
+    eyebrow: "Objetivos y ejecución",
+    description: "Da seguimiento a pendientes, objetivos y señales de productividad en tu jornada.",
+    accent: "violet",
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 11l2 2 4-4" />
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+      </svg>
+    ),
+  },
+];
 
 const Register: React.FC = () => {
   const [step, setStep] = useState(1);
@@ -16,9 +98,21 @@ const Register: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showGoogleMockModal, setShowGoogleMockModal] = useState(false);
-  
+
   const { register, loginGoogle } = useAuth();
   const navigate = useNavigate();
+
+  const passwordStrength = useMemo(() => {
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[A-Z]/.test(password) && /[a-z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^A-Za-z0-9]/.test(password)) score += 1;
+    return score;
+  }, [password]);
+
+  const strengthLabel = ["Añade una contraseña", "Básica", "Aceptable", "Buena", "Fuerte"][passwordStrength];
+  const selectedFocus = focusOptions.find((option) => option.id === profileFocus) ?? focusOptions[0];
 
   const handleOAuthGoogleSuccess = async (tokenResponse: any) => {
     setError(null);
@@ -26,13 +120,13 @@ const Register: React.FC = () => {
     setShowGoogleMockModal(false);
     try {
       const userInfo = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${tokenResponse.access_token}` }
+        headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
       });
       const { email: googleEmail, name: googleName } = userInfo.data;
       await loginGoogle({
         id_token: tokenResponse.access_token,
         email: googleEmail,
-        name: googleName
+        name: googleName,
       });
       navigate("/");
     } catch (err: any) {
@@ -45,16 +139,14 @@ const Register: React.FC = () => {
 
   const triggerRealGoogleLogin = useGoogleLogin({
     onSuccess: handleOAuthGoogleSuccess,
-    onError: () => {
-      setError("El registro real con Google falló.");
-    }
+    onError: () => setError("El registro real con Google falló."),
   });
 
-  const handleNextStep = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNextStep = (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
     if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden");
+      setError("Las contraseñas no coinciden.");
       return;
     }
     setStep(2);
@@ -64,12 +156,11 @@ const Register: React.FC = () => {
     setError(null);
     setLoading(true);
     setShowGoogleMockModal(false);
-
     try {
       await loginGoogle({
         id_token: `mock_google_token_${Date.now()}`,
         email: googleEmail,
-        name: googleName
+        name: googleName,
       });
       navigate("/");
     } catch (err: any) {
@@ -80,8 +171,8 @@ const Register: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
     setLoading(true);
 
@@ -95,7 +186,7 @@ const Register: React.FC = () => {
         if (typeof detail === "string") {
           setError(detail);
         } else if (Array.isArray(detail)) {
-          setError(detail.map((d: any) => `${d.loc.join(".")}: ${d.msg}`).join(" | "));
+          setError(detail.map((item: any) => `${item.loc.join(".")}: ${item.msg}`).join(" | "));
         } else {
           setError(JSON.stringify(detail));
         }
@@ -107,403 +198,343 @@ const Register: React.FC = () => {
     }
   };
 
-  const focusOptions = [
-    {
-      id: "personal",
-      title: "Personal",
-      description: "Hábitos, tareas diarias y diario reflexivo para tu crecimiento.",
-      icon: (
-        <svg className="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      ),
-    },
-    {
-      id: "trabajo",
-      title: "Trabajo",
-      description: "Proyectos colaborativos, tableros Kanban y analíticas avanzadas.",
-      icon: (
-        <svg className="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-    {
-      id: "estudiante",
-      title: "Estudiante",
-      description: "Organización de tareas, proyectos académicos y hábitos de estudio.",
-      icon: (
-        <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-        </svg>
-      ),
-    },
-    {
-      id: "empleado",
-      title: "Empleado",
-      description: "Seguimiento de tareas, objetivos y reportes de productividad laboral.",
-      icon: (
-        <svg className="w-6 h-6 text-amber-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-        </svg>
-      ),
-    },
-  ];
-
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-[var(--color-surface-base)] relative overflow-hidden font-sans">
-      {/* Decorative Blur Orbs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-[var(--color-accent-primary)]/10 blur-[120px] pointer-events-none animate-float" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-[var(--color-accent-secondary)]/10 blur-[120px] pointer-events-none animate-float" style={{ animationDelay: "1s" }} />
-
-      {/* Register Box */}
-      <div className="w-full max-w-lg p-8 mx-4 rounded-2xl border border-[var(--color-border-default)] bg-[var(--color-surface-card)]/80 backdrop-blur-xl shadow-2xl relative z-10 animate-fade-in transition-all duration-300">
-        
-        {/* Brand Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-gradient-to-tr from-[var(--color-accent-primary)] to-[var(--color-accent-secondary)] p-0.5 shadow-lg shadow-emerald-500/15 mb-3">
-            <div className="w-full h-full bg-[var(--color-surface-elevated)] rounded-[10px] flex items-center justify-center">
-              <span className="text-xl font-bold bg-gradient-to-r from-[var(--color-accent-primary)] to-[var(--color-accent-secondary)] bg-clip-text text-transparent">F</span>
-            </div>
-          </div>
-          <h2 className="text-2xl font-extrabold text-[var(--color-text-primary)] tracking-tight">
-            {step === 1 ? "Regístrate" : "Personaliza tu Enfoque"}
+    <AuthShell
+      eyebrow="Empieza con intención"
+      title="Diseña un sistema que se adapte a ti."
+      description="Crea tu espacio y dinos qué quieres priorizar. FRYD organizará la experiencia inicial alrededor de ese contexto."
+      contentWidth={step === 2 ? "wide" : "default"}
+    >
+      <div className="auth-register-header">
+        <div>
+          <p className="fryd-section-label">Nuevo espacio</p>
+          <h2 className="mt-2 text-3xl font-semibold tracking-[-0.04em] text-[var(--color-text-primary)]">
+            {step === 1 ? "Crea tu cuenta" : "¿En qué quieres enfocarte?"}
           </h2>
-          <p className="text-[var(--color-text-secondary)] text-sm mt-1">
-            {step === 1 
-              ? "Comienza tu viaje de crecimiento personal" 
-              : "Selecciona el uso principal que le darás a FRYD"}
+          <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+            {step === 1
+              ? "Primero necesitamos lo esencial. El resto lo iremos construyendo contigo."
+              : "Elige el contexto que mejor representa cómo quieres empezar a usar FRYD."}
           </p>
         </div>
-
-        {/* Progress indicator */}
-        <div className="flex justify-center items-center gap-2 mb-6">
-          <span className={`h-1.5 rounded-full transition-all duration-300 ${step === 1 ? "w-8 bg-[var(--color-accent-primary)]" : "w-2 bg-[var(--color-border-default)]"}`} />
-          <span className={`h-1.5 rounded-full transition-all duration-300 ${step === 2 ? "w-8 bg-[var(--color-accent-primary)]" : "w-2 bg-[var(--color-border-default)]"}`} />
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-5 p-3 rounded-lg border border-[var(--color-accent-danger)]/20 bg-[var(--color-accent-danger)]/10 text-[var(--color-accent-danger)] text-xs text-center animate-shake">
-            {error}
-          </div>
-        )}
-
-        {/* Step 1: Account credentials */}
-        {step === 1 && (
-          <form onSubmit={handleNextStep} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1.5">
-                Nombre de Usuario
-              </label>
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="tu_usuario"
-                className="fryd-input"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1.5">
-                Correo Electrónico
-              </label>
-              <input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="nombre@ejemplo.com"
-                className="fryd-input"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1.5">
-                Contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="fryd-input pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
-                >
-                  {showPassword ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-1.5">
-                Confirmar Contraseña
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  required
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="fryd-input pr-10"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors cursor-pointer"
-                >
-                  {showConfirmPassword ? (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              className="w-full btn-primary py-3.5 mt-4 rounded-xl text-[var(--color-text-inverse)] font-semibold transition-all text-sm cursor-pointer text-center block"
-            >
-              Siguiente
-            </button>
-          </form>
-        )}
-
-        {/* Google Authentication for Step 1 */}
-        {step === 1 && (
-          <>
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-[var(--color-border-default)]"></div>
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase">
-                <span className="bg-[var(--color-surface-card)] px-3 text-[var(--color-text-muted)] font-bold tracking-wider">O registrarse con</span>
-              </div>
-            </div>
-
-            {/* Google Button */}
-            <button
-              type="button"
-              onClick={() => setShowGoogleMockModal(true)}
-              className="w-full py-3 px-4 border border-[var(--color-border-default)] bg-white/[0.01] hover:bg-white/[0.04] rounded-xl text-sm font-semibold text-[var(--color-text-primary)] transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  fill="#EA4335"
-                  d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.355 0 3.309 2.69 1.345 6.6l3.921 3.165z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M16.04 15.345c-1.127.737-2.44 1.182-4.04 1.182a7.077 7.077 0 0 1-6.734-4.855L1.345 14.84C3.309 18.755 7.355 21.445 12 21.445c3.09 0 5.927-1.027 8.036-2.79l-4.036-3.31z"
-                />
-                <path
-                  fill="#4285F4"
-                  d="M23.49 12.273c0-.818-.082-1.609-.218-2.364H12v4.51h6.473c-.29 1.482-1.136 2.727-2.409 3.564l4.036 3.31c2.364-2.182 3.727-5.382 3.727-9.02z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.266 14.235A7.01 7.01 0 0 1 4.91 12c0-.79.136-1.555.355-2.235L1.345 6.6A11.968 11.968 0 0 0 0 12c0 1.927.455 3.755 1.255 5.4l4.01-3.165z"
-                />
-              </svg>
-              Google
-            </button>
-          </>
-        )}
-
-        {/* Step 2: Onboarding focus */}
-        {step === 2 && (
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {focusOptions.map((opt) => (
-                <div
-                  key={opt.id}
-                  onClick={() => setProfileFocus(opt.id)}
-                  className={`p-4 rounded-xl border-2 text-left cursor-pointer transition-all duration-300 flex flex-col h-full hover:scale-[1.02] ${
-                    profileFocus === opt.id
-                      ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)]/10 shadow-lg shadow-emerald-500/5"
-                      : "border-[var(--color-border-default)] bg-[var(--color-surface-elevated)]/40 hover:border-[var(--color-text-muted)]"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className={`p-1.5 rounded-lg ${profileFocus === opt.id ? "bg-[var(--color-accent-primary)]/20" : "bg-[var(--color-surface-card)]"}`}>
-                      {opt.icon}
-                    </div>
-                    <span className="font-bold text-sm text-[var(--color-text-primary)]">{opt.title}</span>
-                  </div>
-                  <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed flex-grow">
-                    {opt.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-4">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="w-1/3 py-3.5 rounded-xl border border-[var(--color-border-default)] bg-[var(--color-surface-elevated)]/30 text-[var(--color-text-primary)] font-semibold transition-all hover:bg-[var(--color-surface-elevated)]/60 text-sm cursor-pointer text-center"
-              >
-                Atrás
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-2/3 btn-primary py-3.5 rounded-xl text-[var(--color-text-inverse)] font-semibold transition-all disabled:opacity-50 disabled:pointer-events-none text-sm cursor-pointer text-center"
-              >
-                {loading ? "Creando cuenta..." : "Crear Cuenta"}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Footer Link */}
-        <div className="mt-6 text-center text-xs text-[var(--color-text-secondary)]">
-          ¿Ya tienes una cuenta?{" "}
-          <Link to="/login" className="text-[var(--color-accent-primary)] hover:text-[var(--color-accent-primary-hover)] font-semibold transition-colors">
-            Inicia sesión
-          </Link>
-        </div>
+        <span className="auth-step-count">Paso {step} de 2</span>
       </div>
 
-      {/* Mock Google Login Modal */}
-      {showGoogleMockModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-md p-4">
-          <div className="w-full max-w-md bg-[#0d0f12] border border-white/[0.08] rounded-[24px] p-8 space-y-6 shadow-2xl animate-fade-in relative">
-            <button
-              onClick={() => setShowGoogleMockModal(false)}
-              className="absolute top-6 right-6 text-slate-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+      <div className="auth-step-track" aria-label={`Paso ${step} de 2`}>
+        <span className="auth-step-segment is-complete" />
+        <span className={`auth-step-segment ${step === 2 ? "is-complete" : ""}`} />
+      </div>
 
-            <div className="text-center">
-              <div className="flex justify-center mb-4">
-                <svg className="w-10 h-10" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z" />
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white tracking-tight">Cuentas de Google</h3>
-              <p className="text-xs text-[var(--color-text-muted)] mt-1.5">Elige una cuenta para continuar en FRYD</p>
-            </div>
-
-            <div className="space-y-3 pt-2">
-              {/* Real OAuth Google Trigger Button */}
-              <button
-                type="button"
-                onClick={() => triggerRealGoogleLogin()}
-                className="w-full p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500/50 text-left transition-all cursor-pointer flex items-center justify-between group gap-4"
-              >
-                <div className="min-w-0">
-                  <span className="block text-sm font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">
-                    🔑 Iniciar con Google Real
-                  </span>
-                  <span className="block text-xs text-slate-400 mt-0.5">
-                    Usa tu cuenta real a través del pop-up oficial de Google
-                  </span>
-                </div>
-              </button>
-
-              <div className="relative py-2">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-white/[0.05]"></div>
-                </div>
-                <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-                  <span className="bg-[#0d0f12] px-3 text-slate-500">O usa cuentas de simulación</span>
-                </div>
-              </div>
-
-              {[
-                { name: "Admin Tester", email: "admin_tester@fryd.com", desc: "Admin local" },
-                { name: "Juan Pérez", email: "juan.perez@gmail.com", desc: "Personal" },
-                { name: "Sofía Rodríguez", email: "sofia.rod@outlook.com", desc: "Profesional" }
-              ].map((acc) => (
-                <button
-                  key={acc.email}
-                  onClick={() => handleGoogleLogin(acc.email, acc.name)}
-                  className="w-full p-4 rounded-2xl border border-white/[0.04] bg-white/[0.02] hover:bg-white/[0.05] hover:border-emerald-500/30 text-left transition-all cursor-pointer flex items-center justify-between group gap-4"
-                >
-                  <div className="min-w-0">
-                    <span className="block text-sm font-bold text-slate-200 group-hover:text-emerald-400 transition-colors truncate">{acc.name}</span>
-                    <span className="block text-xs text-slate-400 mt-0.5 truncate">{acc.email}</span>
-                  </div>
-                  <span className="text-[9px] font-bold bg-white/[0.04] text-slate-400 group-hover:bg-emerald-500/15 group-hover:text-emerald-400 px-2.5 py-1 rounded-lg border border-white/[0.05] group-hover:border-emerald-500/25 transition-all whitespace-nowrap">
-                    {acc.desc}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <div className="relative py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-white/[0.05]"></div>
-              </div>
-              <div className="relative flex justify-center text-[10px] uppercase font-bold tracking-wider">
-                <span className="bg-[#0d0f12] px-3 text-slate-500">O usa otra cuenta</span>
-              </div>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const fd = new FormData(e.currentTarget);
-                const emailVal = fd.get("custom_email") as string;
-                if (emailVal) {
-                  handleGoogleLogin(emailVal, emailVal.split("@")[0]);
-                }
-              }}
-              className="flex gap-3 pt-1"
-            >
-              <input
-                name="custom_email"
-                type="email"
-                required
-                placeholder="correo@ejemplo.com"
-                className="flex-1 px-4 py-3 bg-white/[0.02] border border-white/[0.08] rounded-2xl text-sm text-white focus:outline-none focus:border-emerald-500/50 transition-colors"
-              />
-              <button
-                type="submit"
-                className="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-2xl text-sm font-semibold transition-all cursor-pointer shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20"
-              >
-                Acceder
-              </button>
-            </form>
-          </div>
+      {error && (
+        <div className="auth-error" role="alert">
+          <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-300">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" />
+              <path d="M12 8v4M12 16h.01" />
+            </svg>
+          </span>
+          <span className="text-xs leading-5">{error}</span>
         </div>
       )}
-    </div>
+
+      {step === 1 ? (
+        <>
+          <form onSubmit={handleNextStep} className="mt-7 space-y-5">
+            <div>
+              <label htmlFor="register-username" className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]">
+                Nombre de usuario
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3" />
+                    <path d="M5 21a7 7 0 0 1 14 0" />
+                  </svg>
+                </span>
+                <input
+                  id="register-username"
+                  type="text"
+                  autoComplete="username"
+                  required
+                  value={username}
+                  onChange={(event) => setUsername(event.target.value)}
+                  placeholder="tu_usuario"
+                  className="fryd-input auth-input-with-icon"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="register-email" className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]">
+                Correo electrónico
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <path d="M3 7l9 6 9-6" />
+                  </svg>
+                </span>
+                <input
+                  id="register-email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  placeholder="nombre@ejemplo.com"
+                  className="fryd-input auth-input-with-icon"
+                />
+              </div>
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-4">
+                <label htmlFor="register-password" className="block text-xs font-semibold text-[var(--color-text-secondary)]">
+                  Contraseña
+                </label>
+                <span className="text-[10px] font-medium text-[var(--color-text-muted)]">{strengthLabel}</span>
+              </div>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <rect x="5" y="10" width="14" height="10" rx="2" />
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+                  </svg>
+                </span>
+                <input
+                  id="register-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
+                  placeholder="••••••••"
+                  className="fryd-input auth-input-with-icon auth-input-with-action"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--color-text-primary)]"
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  <EyeIcon hidden={showPassword} />
+                </button>
+              </div>
+              <div className="mt-2 grid grid-cols-4 gap-1.5" aria-hidden="true">
+                {[1, 2, 3, 4].map((level) => (
+                  <span key={level} className={`auth-password-bar ${passwordStrength >= level ? "is-active" : ""}`} />
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="register-confirm-password" className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]">
+                Confirmar contraseña
+              </label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M9 12l2 2 4-4" />
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                </span>
+                <input
+                  id="register-confirm-password"
+                  type={showConfirmPassword ? "text" : "password"}
+                  autoComplete="new-password"
+                  required
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="••••••••"
+                  className="fryd-input auth-input-with-icon auth-input-with-action"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((value) => !value)}
+                  className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[var(--color-text-muted)] transition-colors hover:bg-white/[0.04] hover:text-[var(--color-text-primary)]"
+                  aria-label={showConfirmPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  <EyeIcon hidden={showConfirmPassword} />
+                </button>
+              </div>
+              {confirmPassword && (
+                <p className={`mt-2 flex items-center gap-1.5 text-[10px] font-medium ${password === confirmPassword ? "text-teal-300" : "text-amber-300"}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${password === confirmPassword ? "bg-teal-400" : "bg-amber-400"}`} />
+                  {password === confirmPassword ? "Las contraseñas coinciden" : "Todavía no coinciden"}
+                </p>
+              )}
+            </div>
+
+            <button type="submit" className="btn-primary mt-2 w-full rounded-xl py-3.5 text-sm font-semibold">
+              Continuar
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </form>
+
+          <div className="my-7 flex items-center gap-3" aria-hidden="true">
+            <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">o crea tu espacio con</span>
+            <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowGoogleMockModal(true)}
+            disabled={loading}
+            className="auth-google-button"
+          >
+            <GoogleLogo />
+            Continuar con Google
+          </button>
+        </>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-7">
+          <div className="auth-focus-grid">
+            {focusOptions.map((option) => {
+              const selected = profileFocus === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setProfileFocus(option.id)}
+                  className={`auth-focus-card auth-focus-${option.accent} ${selected ? "is-selected" : ""}`}
+                  aria-pressed={selected}
+                >
+                  <span className="auth-focus-icon">{option.icon}</span>
+                  <span className="min-w-0 flex-1 text-left">
+                    <span className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--color-text-muted)]">{option.eyebrow}</span>
+                    <span className="mt-1 block text-base font-semibold tracking-[-0.02em] text-[var(--color-text-primary)]">{option.title}</span>
+                    <span className="mt-2 block text-xs leading-5 text-[var(--color-text-secondary)]">{option.description}</span>
+                  </span>
+                  <span className={`auth-focus-check ${selected ? "is-visible" : ""}`} aria-hidden="true">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12l4 4L19 6" />
+                    </svg>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="auth-focus-summary">
+            <div className="flex min-w-0 items-start gap-3">
+              <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--brand-gradient-soft)] text-indigo-200">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z" />
+                </svg>
+              </span>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Tu punto de partida: {selectedFocus.title}</p>
+                <p className="mt-1 text-xs leading-5 text-[var(--color-text-muted)]">FRYD usará este enfoque como contexto inicial para organizar tu experiencia.</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-between">
+            <button type="button" onClick={() => setStep(1)} className="btn-secondary px-5 py-3 sm:min-w-[8rem]">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M19 12H5M11 18l-6-6 6-6" />
+              </svg>
+              Atrás
+            </button>
+            <button type="submit" disabled={loading} className="btn-primary px-6 py-3 disabled:pointer-events-none disabled:opacity-55 sm:min-w-[12rem]">
+              {loading ? (
+                <>
+                  <span className="auth-spinner" aria-hidden="true" />
+                  Creando espacio...
+                </>
+              ) : (
+                <>
+                  Crear mi espacio
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <p className="mt-8 text-center text-sm text-[var(--color-text-secondary)]">
+        ¿Ya tienes una cuenta?{" "}
+        <Link to="/login" className="font-semibold text-indigo-300 transition-colors hover:text-indigo-200">
+          Inicia sesión
+        </Link>
+      </p>
+
+      <Modal
+        open={showGoogleMockModal}
+        onClose={() => setShowGoogleMockModal(false)}
+        title="Crear cuenta con Google"
+        description="Usa tu cuenta real o una identidad de simulación para el entorno de pruebas."
+        icon={<GoogleLogo className="h-5 w-5" />}
+      >
+        <div className="space-y-5">
+          <button type="button" onClick={() => triggerRealGoogleLogin()} className="auth-google-real">
+            <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-white text-slate-900">
+              <GoogleLogo className="h-5 w-5" />
+            </span>
+            <span className="min-w-0 flex-1 text-left">
+              <span className="block text-sm font-semibold text-[var(--color-text-primary)]">Abrir Google</span>
+              <span className="mt-0.5 block text-xs leading-5 text-[var(--color-text-muted)]">Autenticación real mediante el popup oficial de Google.</span>
+            </span>
+            <svg className="flex-shrink-0 text-[var(--color-text-muted)]" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M5 12h14M13 6l6 6-6 6" />
+            </svg>
+          </button>
+
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--color-text-muted)]">Cuentas de simulación</span>
+            <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
+          </div>
+
+          <div className="space-y-2.5">
+            {[
+              { name: "Admin Tester", email: "admin_tester@fryd.com", desc: "Admin local" },
+              { name: "Juan Pérez", email: "juan.perez@gmail.com", desc: "Personal" },
+              { name: "Sofía Rodríguez", email: "sofia.rod@outlook.com", desc: "Profesional" },
+            ].map((account) => (
+              <button type="button" key={account.email} onClick={() => handleGoogleLogin(account.email, account.name)} className="auth-account-row group">
+                <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[var(--brand-gradient-soft)] text-xs font-semibold text-indigo-200">
+                  {account.name.split(" ").map((part) => part[0]).slice(0, 2).join("")}
+                </span>
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block truncate text-sm font-medium text-[var(--color-text-primary)]">{account.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-[var(--color-text-muted)]">{account.email}</span>
+                </span>
+                <span className="rounded-lg border border-[var(--color-border-subtle)] bg-white/[0.025] px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-[var(--color-text-muted)] transition-colors group-hover:text-indigo-300">
+                  {account.desc}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-3" aria-hidden="true">
+            <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
+            <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--color-text-muted)]">Otra cuenta simulada</span>
+            <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
+          </div>
+
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              const formData = new FormData(event.currentTarget);
+              const emailValue = formData.get("custom_email") as string;
+              if (emailValue) handleGoogleLogin(emailValue, emailValue.split("@")[0]);
+            }}
+            className="flex flex-col gap-2.5 sm:flex-row"
+          >
+            <input name="custom_email" type="email" required placeholder="correo@ejemplo.com" className="fryd-input min-w-0 flex-1" />
+            <button type="submit" className="btn-secondary whitespace-nowrap px-5">Acceder</button>
+          </form>
+        </div>
+      </Modal>
+    </AuthShell>
   );
 };
 

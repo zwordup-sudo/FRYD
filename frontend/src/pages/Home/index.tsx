@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getTasks, getHabits, getDiaryEntries } from "../../services/api";
+import { useAuth } from "../../context/AuthContext";
 
 type Task = {
   id: number;
@@ -20,11 +21,29 @@ type DiaryEntry = {
   id: number;
   title?: string;
   mood?: string;
+  energy_level?: number;
   created_at: string;
 };
 
+const moodEmoji: Record<string, string> = {
+  happy: "😊",
+  sad: "😢",
+  annoyed: "😤",
+  excited: "🤩",
+  neutral: "😐",
+  stressed: "😰",
+  calm: "😌",
+};
+
+const Arrow = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M5 12h14M13 6l6 6-6 6" />
+  </svg>
+);
+
 export default function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [habits, setHabits] = useState<Habit[]>([]);
   const [entries, setEntries] = useState<DiaryEntry[]>([]);
@@ -49,10 +68,12 @@ export default function HomePage() {
     loadDashboard();
   }, []);
 
-  const pendingTasks = tasks.filter((t) => t.status !== "completed").length;
-  const completedTasks = tasks.filter((t) => t.status === "completed").length;
-  const activeHabits = habits.filter((h) => h.status === "active").length;
-  const inProgressTasks = tasks.filter((t) => t.status === "in_progress").length;
+  const completedTasks = tasks.filter((task) => task.status === "completed").length;
+  const pendingTasks = tasks.filter((task) => task.status === "pending").length;
+  const inProgressTasks = tasks.filter((task) => task.status === "in_progress").length;
+  const activeHabits = habits.filter((habit) => habit.status === "active").length;
+  const taskProgress = tasks.length ? Math.round((completedTasks / tasks.length) * 100) : 0;
+  const displayName = (user?.username || user?.email?.split("@")[0] || "").trim();
 
   const greeting = () => {
     const hour = new Date().getHours();
@@ -68,380 +89,397 @@ export default function HomePage() {
     day: "numeric",
   });
 
-  const taskProgress = tasks.length > 0
-    ? Math.round((completedTasks / tasks.length) * 100)
-    : 0;
-
-  // Calculate a real daily consecutive streak
   const getStreak = () => {
-    if (entries.length === 0) return 0;
-    
-    // Extract unique dates as YYYY-MM-DD
-    const dates = Array.from(new Set(
-      entries.map(e => e.created_at.split('T')[0])
-    )).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-    
-    if (dates.length === 0) return 0;
-
-    const todayStr = new Date().toISOString().split('T')[0];
+    if (!entries.length) return 0;
+    const dates = Array.from(new Set(entries.map((entry) => entry.created_at.split("T")[0]))).sort(
+      (a, b) => new Date(b).getTime() - new Date(a).getTime()
+    );
+    const todayStr = new Date().toISOString().split("T")[0];
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-    let currentStreak = 0;
-    let expectedDate = new Date();
-    
-    if (dates.includes(todayStr)) {
-      expectedDate = new Date();
-    } else if (dates.includes(yesterdayStr)) {
-      expectedDate = yesterday;
-    } else {
-      return 0;
+    let cursor = new Date();
+    if (!dates.includes(todayStr)) {
+      if (!dates.includes(yesterdayStr)) return 0;
+      cursor = yesterday;
     }
 
-    while (true) {
-      const dateStr = expectedDate.toISOString().split('T')[0];
-      if (dates.includes(dateStr)) {
-        currentStreak++;
-        expectedDate.setDate(expectedDate.getDate() - 1);
-      } else {
-        break;
-      }
+    let streak = 0;
+    while (dates.includes(cursor.toISOString().split("T")[0])) {
+      streak += 1;
+      cursor.setDate(cursor.getDate() - 1);
     }
-    return currentStreak;
+    return streak;
   };
 
-  const streakDays = getStreak();
-
-  // Get current week days (Monday to Sunday) mapping to entry dates
-  const getCurrentWeekDays = () => {
+  const weekDays = useMemo(() => {
     const current = new Date();
     const dayOfWeek = current.getDay();
     const distanceToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    
     const monday = new Date(current);
     monday.setDate(current.getDate() + distanceToMonday);
-
-    const entryDates = new Set(entries.map(e => e.created_at.split('T')[0]));
+    const entryDates = new Set(entries.map((entry) => entry.created_at.split("T")[0]));
     const labels = ["L", "M", "M", "J", "V", "S", "D"];
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date().toISOString().split("T")[0];
 
-    return Array.from({ length: 7 }, (_, i) => {
-      const dayDate = new Date(monday);
-      dayDate.setDate(monday.getDate() + i);
-      const dateStr = dayDate.toISOString().split('T')[0];
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      const dateStr = date.toISOString().split("T")[0];
       return {
-        label: labels[i],
+        label: labels[index],
         hasEntry: entryDates.has(dateStr),
         isToday: dateStr === todayStr,
       };
     });
+  }, [entries]);
+
+  const orderedTasks = useMemo(() => {
+    const score = (task: Task) => (task.status === "completed" ? 2 : task.status === "in_progress" ? 0 : 1);
+    return [...tasks]
+      .sort((a, b) => {
+        const byStatus = score(a) - score(b);
+        if (byStatus !== 0) return byStatus;
+        const aTime = a.due_date ? new Date(a.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+        const bTime = b.due_date ? new Date(b.due_date).getTime() : Number.MAX_SAFE_INTEGER;
+        return aTime - bTime;
+      })
+      .slice(0, 4);
+  }, [tasks]);
+
+  const upcomingTask = useMemo(() => {
+    const now = Date.now();
+    return [...tasks]
+      .filter((task) => task.status !== "completed" && task.due_date && new Date(task.due_date).getTime() >= now)
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())[0];
+  }, [tasks]);
+
+  const latestEntry = useMemo(
+    () => [...entries].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0],
+    [entries]
+  );
+
+  const formatTime = (dateString?: string) => {
+    if (!dateString) return "Sin fecha";
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) return "Sin fecha";
+    const todayDate = new Date();
+    const sameDay = date.toDateString() === todayDate.toDateString();
+    return `${sameDay ? "Hoy · " : ""}${date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}`;
   };
 
-  const weekDays = getCurrentWeekDays();
-  
-  // Overall completion rate for the motivation ring
-  const overallProgress = tasks.length > 0 || habits.length > 0
-    ? Math.round(((completedTasks + activeHabits) / ((tasks.length || 1) + (habits.length || 1))) * 100)
-    : 0;
+  const formatEntryTime = (dateString?: string) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toLocaleString("es-MX", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  };
+
+  const insight = (() => {
+    if (!tasks.length && !entries.length && !habits.length) {
+      return "Tu espacio está listo. Agrega tu primera tarea, hábito o reflexión para que FRYD empiece a construir contexto contigo.";
+    }
+    if (completedTasks > 0 && entries.length > 0) {
+      return `Llevas ${completedTasks} tarea${completedTasks === 1 ? "" : "s"} completada${completedTasks === 1 ? "" : "s"} y ${entries.length} registro${entries.length === 1 ? "" : "s"} de diario. Mantener ambos hábitos te dará una lectura más completa de tu progreso.`;
+    }
+    if (activeHabits > 0) {
+      return `Tienes ${activeHabits} hábito${activeHabits === 1 ? "" : "s"} activo${activeHabits === 1 ? "" : "s"}. La constancia diaria hará que tus analíticas sean cada vez más útiles.`;
+    }
+    return "Ya tienes actividad en FRYD. Completa tus pendientes y registra cómo te fue para conectar productividad y reflexión.";
+  })();
+
+  const quickActions = [
+    {
+      label: "Nueva tarea",
+      route: "/task",
+      background: "linear-gradient(145deg, #6841e8 0%, #4338ca 100%)",
+      icon: <path d="M12 5v14M5 12h14" />,
+    },
+    {
+      label: "Nuevo hábito",
+      route: "/habit",
+      background: "linear-gradient(145deg, #2f7df4 0%, #1859c9 100%)",
+      icon: <><path d="M20 12a8 8 0 11-2.34-5.66" /><path d="M20 4v5h-5" /></>,
+    },
+    {
+      label: "Nueva entrada",
+      route: "/diary",
+      background: "linear-gradient(145deg, #0f6e75 0%, #0c4f58 100%)",
+      icon: <><path d="M5 4.5A2.5 2.5 0 017.5 2H20v17H7.5A2.5 2.5 0 005 21.5v-17z" /><path d="M5 4.5v17" /></>,
+    },
+    {
+      label: "Preguntar a FRYD",
+      route: "/assistant",
+      background: "linear-gradient(145deg, #1c2a50 0%, #151f3c 100%)",
+      icon: <><path d="M12 3l1.05 3.02A4.7 4.7 0 0016 8.95L19 10l-3 1.05A4.7 4.7 0 0013.05 14L12 17l-1.05-3A4.7 4.7 0 008 11.05L5 10l3-1.05A4.7 4.7 0 0010.95 6L12 3z" /></>,
+    },
+  ];
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 animate-fade-in">
-      {/* LEFT COLUMN: Main Dashboard Content (2/3 width on desktop) */}
-      <div className="xl:col-span-2 flex flex-col gap-6">
-        {/* Header greeting */}
-        <div className="mb-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)] mb-1">
-            {greeting()} 👋
+    <div className="animate-fade-in pb-8">
+      <header className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between mb-9">
+        <div>
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-[-0.03em] text-[var(--color-text-primary)]">
+            {greeting()}{displayName ? `, ${displayName}` : ""} <span className="inline-block">👋</span>
           </h1>
-          <p className="text-[var(--color-text-secondary)] text-sm capitalize">
-            {today}
-          </p>
+          <p className="mt-1.5 text-sm text-[var(--color-text-secondary)] capitalize">{today}</p>
         </div>
+        <button onClick={() => navigate("/assistant")} className="brand-outline rounded-2xl px-5 py-3 text-sm font-semibold text-[var(--color-text-primary)] hover:bg-white/[0.025] transition-colors inline-flex items-center justify-center gap-2 self-start">
+          <span className="brand-gradient-text text-lg">✦</span>
+          Preguntar a FRYD
+        </button>
+      </header>
 
-        {errorMessage && (
-          <div className="alert alert-error">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-            {errorMessage}
-          </div>
-        )}
+      {errorMessage && <div className="alert alert-error mb-6">{errorMessage}</div>}
 
-        {/* Stats cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {/* Pending tasks */}
-          <button
-            onClick={() => navigate("/task")}
-            className="card text-left group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl gradient-green flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                  <path d="M9 12l2 2 4-4" />
-                </svg>
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_22rem] gap-x-6 gap-y-10">
+        <div className="space-y-10 min-w-0">
+          <section className="fryd-panel p-6">
+            <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">¿Qué quieres avanzar hoy?</h2>
+            <div className="mt-5 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+              {quickActions.map((action) => (
+                <button
+                  key={action.label}
+                  type="button"
+                  onClick={() => navigate(action.route, action.route === "/assistant" ? undefined : { state: { openCreate: true } })}
+                  className="quick-action-tile p-4 flex flex-col items-center justify-center gap-4 text-center"
+                  style={{ background: action.background }}
+                >
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {action.icon}
+                  </svg>
+                  <span className="text-sm font-semibold">{action.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="fryd-panel p-6">
+            <div className="flex items-start justify-between gap-4 mb-5">
+              <div>
+                <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Tu día</h2>
+                <p className="text-sm text-[var(--color-text-muted)]">Progreso de objetivos</p>
               </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" className="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">{pendingTasks}</p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">Pendientes</p>
-          </button>
-
-          {/* In progress */}
-          <button
-            onClick={() => navigate("/task")}
-            className="card text-left group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl gradient-amber flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="10" />
-                  <path d="M12 6v6l4 2" />
-                </svg>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" className="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">{inProgressTasks}</p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">En progreso</p>
-          </button>
-
-          {/* Active habits */}
-          <button
-            onClick={() => navigate("/habit")}
-            className="card text-left group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl gradient-purple flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10" />
-                  <path d="M12 8v4l3 3" />
-                </svg>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" className="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">{activeHabits}</p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">Hábitos activos</p>
-          </button>
-
-          {/* Diary entries */}
-          <button
-            onClick={() => navigate("/diary")}
-            className="card text-left group"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="w-10 h-10 rounded-xl gradient-pink flex items-center justify-center opacity-90 group-hover:opacity-100 transition-opacity">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M4 4h16a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V5a1 1 0 011-1z" />
-                  <path d="M7 8h10M7 12h7" />
-                </svg>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" strokeWidth="2" className="opacity-0 group-hover:opacity-100 transition-opacity"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-            </div>
-            <p className="text-2xl sm:text-3xl font-bold text-[var(--color-text-primary)]">{entries.length}</p>
-            <p className="text-xs text-[var(--color-text-muted)] mt-1">Entradas diario</p>
-          </button>
-        </div>
-
-        {/* Task progress */}
-        <div className="card-static">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-base font-semibold text-[var(--color-text-primary)]">Progreso de tareas</h2>
-            <span className="badge badge-green">{taskProgress}%</span>
-          </div>
-
-          <div className="w-full h-2.5 bg-[var(--color-surface-input)] rounded-full overflow-hidden mb-4">
-            <div
-              className="h-full gradient-green rounded-full transition-all duration-700 ease-out"
-              style={{ width: `${taskProgress}%` }}
-            />
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div className="text-center p-3 rounded-lg bg-[var(--color-surface-input)]">
-              <p className="text-lg font-bold text-[var(--color-accent-primary)]">{completedTasks}</p>
-              <p className="text-[11px] text-[var(--color-text-muted)]">Completadas</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-[var(--color-surface-input)]">
-              <p className="text-lg font-bold text-[var(--color-accent-warning)]">{inProgressTasks}</p>
-              <p className="text-[11px] text-[var(--color-text-muted)]">En progreso</p>
-            </div>
-            <div className="text-center p-3 rounded-lg bg-[var(--color-surface-input)]">
-              <p className="text-lg font-bold text-[var(--color-text-secondary)]">{pendingTasks}</p>
-              <p className="text-[11px] text-[var(--color-text-muted)]">Pendientes</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent activity */}
-        <div className="card-static">
-          <h2 className="text-base font-semibold text-[var(--color-text-primary)] mb-4">Resumen de Actividad</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 rounded-xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)]">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="status-dot status-dot-active" />
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">Productividad</p>
-              </div>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                {completedTasks > 0
-                  ? `Has completado ${completedTasks} tarea${completedTasks > 1 ? "s" : ""}. ${pendingTasks > 0 ? `Tienes ${pendingTasks} pendiente${pendingTasks > 1 ? "s" : ""}.` : "¡Todo al día!"}`
-                  : "Comienza tu día agregando una tarea."}
-              </p>
+              <span className="badge badge-purple">{taskProgress}% tareas</span>
             </div>
 
-            <div className="p-4 rounded-xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)]">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="status-dot status-dot-active" />
-                <p className="text-sm font-medium text-[var(--color-text-primary)]">Estado personal</p>
-              </div>
-              <p className="text-sm text-[var(--color-text-secondary)]">
-                {entries.length > 0
-                  ? `FRYD tiene ${entries.length} entrada${entries.length > 1 ? "s" : ""} de diario y ${activeHabits} hábito${activeHabits !== 1 ? "s" : ""} activo${activeHabits !== 1 ? "s" : ""}s.`
-                  : "Registra tu primer día en el diario para comenzar."}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* RIGHT COLUMN: Sidebar - Streaks, Progress Gauge & Quick Actions (1/3 width on desktop) */}
-      <div className="flex flex-col gap-6">
-        {/* Streak & Motivation Panel */}
-        <div className="card-static bg-gradient-to-br from-[var(--color-surface-card)] to-[var(--color-surface-input)] relative overflow-hidden group">
-          {/* Subtle background glow */}
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-[var(--color-accent-warning)] opacity-10 rounded-full blur-2xl group-hover:scale-125 transition-transform duration-500" />
-          
-          <div className="flex items-start justify-between">
-            <div>
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-[var(--color-accent-warning)]">FRYD Racha Activa</span>
-              <h2 className="text-xl font-bold text-[var(--color-text-primary)] mt-1 flex items-center gap-2">
-                🔥 {streakDays} {streakDays === 1 ? "Día" : "Días"}
-              </h2>
-            </div>
-          </div>
-          
-          <p className="text-xs text-[var(--color-text-secondary)] mt-2">
-            ¡Estás logrando tus objetivos! Mantén la racha registrando tu diario y completando tus tareas diarias.
-          </p>
-
-          {/* 7-day mini calendar indicator */}
-          <div className="flex items-center justify-between gap-1 mt-4 p-2 bg-[var(--color-surface-input)] rounded-xl border border-[var(--color-border-subtle)]">
-            {weekDays.map((day, idx) => {
-              return (
-                <div key={idx} className="flex flex-col items-center gap-1.5 flex-1">
-                  <span className={`text-[10px] font-semibold ${day.isToday ? "text-[var(--color-accent-primary)] font-bold" : "text-[var(--color-text-muted)]"}`}>{day.label}</span>
-                  <div 
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs transition-all ${
-                      day.hasEntry 
-                        ? "gradient-amber text-var(--color-text-inverse) font-bold shadow-md shadow-[rgba(251,191,36,0.2)]" 
-                        : "bg-[var(--color-surface-card)] border border-[var(--color-border-subtle)] text-[var(--color-text-muted)]"
-                    } ${day.isToday && !day.hasEntry ? "border border-[var(--color-accent-primary)]/40" : ""}`}
-                  >
-                    {day.hasEntry ? "✓" : ""}
+            <div className="grid grid-cols-1 lg:grid-cols-[12rem_minmax(0,1fr)] gap-6 items-center">
+              <div className="flex justify-center lg:border-r lg:border-[var(--color-border-subtle)] lg:pr-6">
+                <div className="relative w-36 h-36 sm:w-40 sm:h-40">
+                  <svg className="w-full h-full -rotate-90" viewBox="0 0 160 160" aria-label={`${completedTasks} de ${tasks.length} tareas completadas`}>
+                    <defs>
+                      <linearGradient id="frydProgressGradient" x1="0" y1="0" x2="1" y2="1">
+                        <stop offset="0%" stopColor="#6366F1" />
+                        <stop offset="52%" stopColor="#3B82F6" />
+                        <stop offset="100%" stopColor="#14B8A6" />
+                      </linearGradient>
+                    </defs>
+                    <circle cx="80" cy="80" r="64" fill="none" stroke="rgba(148,163,184,.10)" strokeWidth="10" />
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r="64"
+                      fill="none"
+                      stroke="url(#frydProgressGradient)"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeDasharray={2 * Math.PI * 64}
+                      strokeDashoffset={2 * Math.PI * 64 * (1 - taskProgress / 100)}
+                      className="transition-all duration-700"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center">
+                    <span className="text-3xl font-bold text-[var(--color-text-primary)]">{completedTasks} / {tasks.length}</span>
+                    <span className="text-xs text-[var(--color-text-muted)]">completadas</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
 
-        {/* Circular Progress Gauge */}
-        <div className="card-static flex flex-col items-center text-center p-6">
-          <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4 w-full text-left">Meta del Día</h3>
-          
-          <div className="relative w-36 h-36 flex items-center justify-center">
-            {/* SVG Circle Gauge */}
-            <svg className="w-full h-full transform -rotate-90">
-              {/* Background Track */}
-              <circle
-                cx="72"
-                cy="72"
-                r="62"
-                className="stroke-[var(--color-surface-input)] fill-transparent"
-                strokeWidth="10"
-              />
-              {/* Foreground Progress */}
-              <circle
-                cx="72"
-                cy="72"
-                r="62"
-                className="stroke-[var(--color-accent-primary)] fill-transparent transition-all duration-700 ease-out"
-                strokeWidth="10"
-                strokeDasharray={2 * Math.PI * 62}
-                strokeDashoffset={2 * Math.PI * 62 * (1 - (overallProgress / 100))}
-                strokeLinecap="round"
-              />
-            </svg>
-            <div className="absolute flex flex-col items-center">
-              <span className="text-3xl font-black text-[var(--color-text-primary)]">{overallProgress}%</span>
-              <span className="text-[9px] uppercase tracking-wider text-[var(--color-text-muted)] font-bold">Completado</span>
+              <div className="min-w-0">
+                {orderedTasks.length ? (
+                  <div className="divide-y divide-[var(--color-border-subtle)]">
+                    {orderedTasks.map((task) => {
+                      const completed = task.status === "completed";
+                      return (
+                        <button key={task.id} onClick={() => navigate("/task")} className="w-full py-3 first:pt-0 last:pb-0 flex items-center gap-3 text-left group">
+                          <span className={`w-5 h-5 rounded-full flex-shrink-0 border flex items-center justify-center ${completed ? "bg-[var(--color-accent-success)] border-[var(--color-accent-success)] text-[#07101f]" : "border-[#42516d] group-hover:border-[#7c83ff]"}`}>
+                            {completed && (
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 12l4 4L19 6" /></svg>
+                            )}
+                          </span>
+                          <span className={`min-w-0 flex-1 truncate text-sm font-medium ${completed ? "text-[var(--color-text-muted)] line-through" : "text-[var(--color-text-primary)]"}`}>{task.title}</span>
+                          <span className="hidden sm:block text-xs text-[var(--color-text-muted)] whitespace-nowrap">{formatTime(task.due_date)}</span>
+                          <span className={`badge ${task.status === "in_progress" ? "badge-yellow" : completed ? "badge-green" : "badge-purple"}`}>
+                            {task.status === "in_progress" ? "En progreso" : completed ? "Hecha" : "Pendiente"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-2xl border border-dashed border-[var(--color-border-default)] py-8 px-5 text-center">
+                    <p className="text-sm font-medium text-[var(--color-text-primary)]">Tu día está despejado.</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-muted)]">Agrega una tarea para empezar a construir tu progreso.</p>
+                    <button onClick={() => navigate("/task", { state: { openCreate: true } })} className="mt-4 fryd-link inline-flex items-center gap-2">Crear tarea <Arrow /></button>
+                  </div>
+                )}
+                {tasks.length > 0 && (
+                  <button onClick={() => navigate("/task")} className="mt-5 fryd-link inline-flex items-center gap-2">Ver todas mis tareas <Arrow /></button>
+                )}
+              </div>
             </div>
-          </div>
-          
-          <p className="text-xs text-[var(--color-text-secondary)] mt-4">
-            {overallProgress >= 80 
-              ? "¡Impresionante! Has alcanzado la mayor parte de tus metas de hoy." 
-              : overallProgress >= 50 
-              ? "¡Vas por buen camino! Continúa un poco más." 
-              : "Consigue tus primeros checks del día para activar el progreso."}
-          </p>
+          </section>
+
+          <section className="grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-7">
+            <article className="fryd-panel fryd-panel-interactive p-5 min-h-48">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[#9da5ff]">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="3" width="18" height="18" rx="4"/><path d="M8.5 12l2.2 2.2L15.8 9"/></svg>
+                  </span>
+                  <h3 className="font-semibold">Tareas</h3>
+                </div>
+                <button onClick={() => navigate("/task")} className="fryd-link inline-flex items-center gap-1">Ver todas <Arrow /></button>
+              </div>
+              <p className="mt-5 text-3xl font-bold">{pendingTasks + inProgressTasks}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">pendientes</p>
+              <div className="brand-progress-track h-2 rounded-full overflow-hidden mt-4">
+                <div className="brand-progress-fill h-full rounded-full" style={{ width: `${taskProgress}%` }} />
+              </div>
+              <div className="mt-4 flex items-center justify-between text-xs">
+                <span className="text-[var(--color-text-secondary)]"><strong className="text-[#9da5ff] text-base mr-1">{inProgressTasks}</strong> En progreso</span>
+                <span className="text-[var(--color-text-secondary)]"><strong className="text-[var(--color-accent-success)] text-base mr-1">{completedTasks}</strong> Completadas</span>
+              </div>
+            </article>
+
+            <article className="fryd-panel fryd-panel-interactive p-5 min-h-48">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[#60a5fa]">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M20 12a8 8 0 11-2.34-5.66"/><path d="M20 4v5h-5"/></svg>
+                  </span>
+                  <h3 className="font-semibold">Hábitos</h3>
+                </div>
+                <button onClick={() => navigate("/habit")} className="fryd-link inline-flex items-center gap-1">Ver todos <Arrow /></button>
+              </div>
+              <p className="mt-5 text-3xl font-bold">{activeHabits}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{activeHabits === 1 ? "activo" : "activos"}</p>
+              <div className="mt-5 flex justify-between">
+                {weekDays.map((day, index) => (
+                  <div key={`${day.label}-${index}`} className="flex flex-col items-center gap-2">
+                    <span className={`text-[10px] ${day.isToday ? "text-[#9da5ff] font-bold" : "text-[var(--color-text-muted)]"}`}>{day.label}</span>
+                    <span className={`w-4 h-4 rounded-full border ${day.hasEntry ? "bg-[var(--color-accent-success)] border-[var(--color-accent-success)] shadow-[0_0_12px_rgba(52,211,153,.2)]" : day.isToday ? "border-[#7c83ff] bg-[rgba(99,102,241,.24)]" : "border-[var(--color-border-default)] bg-[var(--color-surface-input)]"}`} />
+                  </div>
+                ))}
+              </div>
+              <p className="mt-4 text-xs text-[var(--color-text-muted)]">🔥 Racha de diario: {getStreak()} días</p>
+            </article>
+
+            <article className="fryd-panel fryd-panel-interactive p-5 min-h-48">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-[#2dd4bf]">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 4.5A2.5 2.5 0 017.5 2H20v17H7.5A2.5 2.5 0 005 21.5v-17z"/><path d="M5 4.5v17"/></svg>
+                  </span>
+                  <h3 className="font-semibold">Diario</h3>
+                </div>
+                <button onClick={() => navigate("/diary")} className="fryd-link inline-flex items-center gap-1">Ver entradas <Arrow /></button>
+              </div>
+              <p className="mt-5 text-3xl font-bold">{entries.length}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{entries.length === 1 ? "entrada" : "entradas"}</p>
+              {latestEntry ? (
+                <div className="mt-4 flex items-end justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] text-[var(--color-text-muted)]">Última entrada</p>
+                    <p className="mt-1 text-xs text-[var(--color-text-secondary)] truncate">{latestEntry.title || "Reflexión personal"}</p>
+                    <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">{formatEntryTime(latestEntry.created_at)}</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-white/[0.045] border border-[var(--color-border-subtle)] flex items-center justify-center text-xl flex-shrink-0">{moodEmoji[latestEntry.mood || "neutral"] || "😐"}</div>
+                </div>
+              ) : (
+                <button onClick={() => navigate("/diary", { state: { openCreate: true } })} className="mt-6 fryd-link inline-flex items-center gap-2">Escribir primera entrada <Arrow /></button>
+              )}
+            </article>
+          </section>
+
+          <section className="fryd-panel relative overflow-hidden px-6 py-5 flex items-center gap-4">
+            <div className="absolute inset-0 brand-gradient-soft opacity-40 pointer-events-none" />
+            <div className="relative brand-gradient w-11 h-11 rounded-full flex items-center justify-center text-2xl font-serif text-white flex-shrink-0">“</div>
+            <p className="relative text-sm sm:text-base text-[var(--color-text-secondary)] max-w-2xl">“La productividad no es hacer más, es enfocar tu energía en lo que realmente importa.”</p>
+            <div className="relative ml-auto hidden sm:block text-3xl">🚀</div>
+          </section>
         </div>
 
-        {/* Quick actions inside the Sidebar */}
-        <div className="card-static">
-          <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">Acciones rápidas</h2>
-          <div className="grid grid-cols-1 gap-2.5">
-            <button
-              onClick={() => navigate("/task")}
-              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-input)] hover:bg-[var(--color-surface-card-hover)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-accent)] transition-all duration-200 text-left group"
-            >
-              <div className="w-8 h-8 rounded-lg gradient-green flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--color-text-inverse)" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </div>
+        <aside className="space-y-9">
+          <section className="fryd-panel p-6">
+            <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Nueva tarea</p>
-                <p className="text-[9px] text-[var(--color-text-muted)]">Agregar pendiente</p>
+                <h2 className="text-base font-semibold">Racha actual</h2>
+                <p className="mt-3 text-3xl font-bold">🔥 {getStreak()} <span className="text-xl">días</span></p>
               </div>
-            </button>
+              <span className="text-[var(--color-text-muted)]">•••</span>
+            </div>
+            <p className="mt-1 text-xs text-[var(--color-text-secondary)]">Sigue así; cada registro construye contexto para tu progreso.</p>
+            <div className="mt-5 flex justify-between">
+              {weekDays.map((day, index) => (
+                <div key={`streak-${index}`} className="flex flex-col items-center gap-2.5">
+                  <span className={`text-[10px] ${day.isToday ? "text-white font-bold" : "text-[var(--color-text-muted)]"}`}>{day.label}</span>
+                  <span className={`w-6 h-6 rounded-full border ${day.hasEntry ? "bg-[var(--color-accent-success)] border-[#54e2b3] shadow-[0_0_14px_rgba(52,211,153,.22)]" : day.isToday ? "bg-[rgba(99,102,241,.45)] border-[#818cf8]" : "bg-[var(--color-surface-input)] border-[var(--color-border-default)]"}`} />
+                </div>
+              ))}
+            </div>
+          </section>
 
-            <button
-              onClick={() => navigate("/habit")}
-              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-input)] hover:bg-[var(--color-surface-card-hover)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-accent)] transition-all duration-200 text-left group"
-            >
-              <div className="w-8 h-8 rounded-lg gradient-purple flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          <section className="fryd-panel p-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold">Próximo en tu agenda</h2>
+              <span className="text-[#9da5ff]">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+              </span>
+            </div>
+            {upcomingTask ? (
+              <button onClick={() => navigate("/task")} className="mt-5 w-full rounded-2xl border border-[var(--color-border-subtle)] bg-white/[0.025] p-4 flex items-center gap-4 text-left hover:bg-white/[0.04] transition-colors">
+                <div className="w-14 flex-shrink-0 border-r border-[var(--color-border-subtle)] pr-3">
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{new Date(upcomingTask.due_date).toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit" })}</p>
+                  <p className="text-[11px] text-[var(--color-text-muted)]">{new Date(upcomingTask.due_date).toDateString() === new Date().toDateString() ? "Hoy" : new Date(upcomingTask.due_date).toLocaleDateString("es-MX", { day: "numeric", month: "short" })}</p>
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)] truncate">{upcomingTask.title}</p>
+                  <p className="text-[11px] text-[var(--color-text-muted)] mt-1">Tarea FRYD</p>
+                </div>
+              </button>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-dashed border-[var(--color-border-default)] p-5 text-center">
+                <p className="text-sm text-[var(--color-text-secondary)]">No tienes vencimientos próximos.</p>
               </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Nuevo hábito</p>
-                <p className="text-[9px] text-[var(--color-text-muted)]">Crear rutina</p>
-              </div>
-            </button>
+            )}
+            <button onClick={() => navigate("/task")} className="mt-5 fryd-link inline-flex items-center gap-2">Ver tareas <Arrow /></button>
+          </section>
 
-            <button
-              onClick={() => navigate("/diary")}
-              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-input)] hover:bg-[var(--color-surface-card-hover)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-accent)] transition-all duration-200 text-left group"
-            >
-              <div className="w-8 h-8 rounded-lg gradient-pink flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Nueva entrada</p>
-                <p className="text-[9px] text-[var(--color-text-muted)]">Escribir en diario</p>
-              </div>
-            </button>
+          <section className="fryd-panel relative overflow-hidden p-6 min-h-80">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(99,102,241,.2),transparent_48%),radial-gradient(circle_at_90%_90%,rgba(20,184,166,.14),transparent_45%)] pointer-events-none" />
+            <div className="relative flex items-center gap-2.5">
+              <span className="brand-gradient-text text-xl">✦</span>
+              <h2 className="text-base font-semibold">Insight de FRYD</h2>
+            </div>
+            <p className="relative mt-4 text-sm leading-6 text-[var(--color-text-secondary)]">{insight}</p>
 
-            <button
-              onClick={() => navigate("/assistant")}
-              className="flex items-center gap-3 p-3 rounded-xl bg-[var(--color-surface-input)] hover:bg-[var(--color-surface-card-hover)] border border-[var(--color-border-subtle)] hover:border-[var(--color-border-accent)] transition-all duration-200 text-left group"
-            >
-              <div className="w-8 h-8 rounded-lg gradient-blue flex items-center justify-center flex-shrink-0">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-[var(--color-text-primary)]">Asistente IA</p>
-                <p className="text-[9px] text-[var(--color-text-muted)]">Hablar con IA</p>
-              </div>
-            </button>
-          </div>
-        </div>
+            <div className="relative mt-8 h-24" aria-hidden="true">
+              <svg viewBox="0 0 280 90" className="w-full h-full" fill="none">
+                <defs>
+                  <linearGradient id="insightLine" x1="0" y1="0" x2="280" y2="90">
+                    <stop stopColor="#7C3AED" />
+                    <stop offset="0.52" stopColor="#3B82F6" />
+                    <stop offset="1" stopColor="#14B8A6" />
+                  </linearGradient>
+                </defs>
+                <path d="M2 72 C38 24, 65 42, 94 66 S145 37, 174 28 S221 55, 278 8" stroke="url(#insightLine)" strokeWidth="2.2" strokeLinecap="round" />
+                {[{x:48,y:35,c:'#7C3AED'},{x:103,y:65,c:'#3B82F6'},{x:174,y:28,c:'#38BDF8'},{x:226,y:45,c:'#14B8A6'},{x:278,y:8,c:'#2DD4BF'}].map((dot) => <circle key={`${dot.x}-${dot.y}`} cx={dot.x} cy={dot.y} r="4.5" fill={dot.c} />)}
+              </svg>
+            </div>
+            <button onClick={() => navigate("/analytics")} className="relative mt-5 fryd-link inline-flex items-center gap-2">Ver más analíticas <Arrow /></button>
+          </section>
+        </aside>
       </div>
     </div>
   );

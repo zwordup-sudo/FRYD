@@ -1,117 +1,200 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { getTasks, getHabits, getDiaryEntries, updateUserSettings } from "../../services/api";
 import { useAuth } from "../../context/AuthContext";
+import PageHeader from "../../components/ui/PageHeader";
+import StatTile from "../../components/ui/StatTile";
+import Modal from "../../components/ui/Modal";
 
 const GRADIENTS = [
+  { id: "fryd", label: "FRYD", value: "linear-gradient(135deg, #6366f1 0%, #3b82f6 52%, #14b8a6 100%)" },
   { id: "indigo-violet", label: "Índigo & Violeta", value: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)" },
   { id: "purple-rose", label: "Rosa & Morado", value: "linear-gradient(135deg, #a855f7 0%, #f472b6 100%)" },
   { id: "emerald-teal", label: "Esmeralda & Menta", value: "linear-gradient(135deg, #10b981 0%, #14b8a6 100%)" },
-  { id: "orange-amber", label: "Naranja & Ámbar", value: "linear-gradient(135deg, #f97316 0%, #f59e0b 100%)" },
   { id: "sky-blue", label: "Celeste & Azul", value: "linear-gradient(135deg, #38bdf8 0%, #2563eb 100%)" },
 ];
 
 const translations = {
   es: {
-    profile: "Mi Perfil",
-    manage: "Gestiona tu cuenta y preferencias de FRYD.",
-    active: "Activo",
-    statsTitle: "Tus estadísticas",
+    eyebrow: "TU ESPACIO",
+    profile: "Perfil y ajustes",
+    manage: "Configura cómo se ve FRYD, cómo trabaja contigo y qué integraciones están activas.",
+    active: "Cuenta activa",
+    statsTitle: "Tu actividad",
     completed: "Completadas",
     pending: "Pendientes",
     activeHabits: "Hábitos activos",
-    diaryEntries: "Entradas diario",
-    completionRate: "Tasa de completado de tareas",
+    diaryEntries: "Entradas de diario",
+    completionRate: "Tasa de completado",
     accountTitle: "Cuenta",
+    accountDesc: "Tu identidad dentro de FRYD.",
     username: "Nombre de usuario",
     email: "Correo electrónico",
     edit: "Editar",
     save: "Guardar",
     cancel: "Cancelar",
-    preferencesTitle: "Preferencias",
-    darkTheme: "Tema oscuro",
-    darkThemeDesc: "Alternar entre modo claro y oscuro",
+    preferencesTitle: "Experiencia",
+    preferencesDesc: "Ajusta la apariencia, idioma y asistente predeterminado.",
+    darkTheme: "Apariencia",
+    dark: "Oscuro",
+    light: "Claro",
     langLabel: "Idioma",
-    langDesc: "Idioma de la interfaz",
     aiLabel: "Asistente IA",
-    aiDesc: "Proveedor predeterminado",
-    whatsappTitle: "Integración con WhatsApp",
-    whatsappDesc: "Recordatorios y Bot de Tareas",
-    whatsappDetails: "Recibe notificaciones de tus tareas pendientes y conversa con FRYD directamente por WhatsApp utilizando la API de Twilio.",
-    whatsappSteps: "Pasos para conectar:",
-    step1: "Busca tu código Sandbox en la consola de Twilio e ingrésalo abajo.",
-    step2: "Escanea el código QR de al lado con tu celular o haz clic aquí.",
-    step3: "Envía el mensaje por WhatsApp.",
-    step4: "Ingresa tu número de WhatsApp y activa los recordatorios abajo.",
+    focusLabel: "Enfoque de cuenta",
+    focusDesc: "FRYD usa este enfoque para priorizar herramientas y contexto.",
+    personal: "Personal",
+    personalDesc: "Organización, bienestar y objetivos personales.",
+    trabajo: "Trabajo",
+    trabajoDesc: "Proyectos, entregables y productividad profesional.",
+    estudiante: "Estudiante",
+    estudianteDesc: "Estudio, hábitos académicos y seguimiento de pendientes.",
+    empleado: "Empleado",
+    empleadoDesc: "Rutina laboral, colaboración y progreso diario.",
+    identityTitle: "Identidad visual",
+    identityDesc: "Elige el acento de tu avatar sin alterar la identidad general de FRYD.",
+    whatsappTitle: "WhatsApp",
+    whatsappDesc: "Recordatorios y captura rápida de tareas.",
+    whatsappConnected: "Configurado",
+    whatsappInactive: "Sin configurar",
+    configure: "Configurar",
+    integrationDesc: "Conecta el Sandbox de Twilio para recibir recordatorios y conversar con FRYD desde WhatsApp.",
+    whatsappSteps: "Antes de guardar",
+    step1: "Copia tu código Sandbox de Twilio (por ejemplo: join simple-giant).",
+    step2: "Escanea el QR o abre el enlace para enviar el mensaje de unión.",
+    step3: "Añade tu número con código de país y activa los recordatorios.",
     qrLabel: "Escanea para conectar",
-    qrError: "Falta ingresar código Sandbox válido",
-    saveConfig: "Guardar Configuración",
-    savedOk: "¡Guardado correctamente!",
-    logout: "Cerrar Sesión",
-    aboutTitle: "Acerca de",
+    qrError: "Ingresa un código Sandbox válido para generar el QR.",
+    sandboxCode: "Código Sandbox",
+    phone: "Número de WhatsApp",
+    reminders: "Recordatorios activos",
+    remindersDesc: "Permite que FRYD envíe alertas de tareas por WhatsApp.",
+    saveConfig: "Guardar integración",
+    savedOk: "Configuración guardada",
+    logout: "Cerrar sesión",
+    aboutTitle: "FRYD",
+    aboutDesc: "Tu workspace personal para organizar, conectar y avanzar.",
     version: "Versión",
     stack: "Stack",
-    philosophy: "Filosofía",
-    changeAvatarColor: "Color de Perfil",
-    focusLabel: "Enfoque de Cuenta",
-    focusDesc: "Personaliza las pestañas y herramientas visibles",
-    personal: "Personal",
-    trabajo: "Trabajo",
-    estudiante: "Estudiante",
-    empleado: "Empleado"
+    philosophy: "Principio",
+    changeAvatarColor: "Color de perfil",
+    overviewTitle: "Estado de tu espacio",
+    overviewDesc: "Una lectura rápida de cómo estás usando FRYD.",
+    taskHealth: "Ejecución de tareas",
+    habitHealth: "Hábitos activos",
+    journalHealth: "Reflexiones guardadas",
+    accountFocus: "Enfoque",
+    openWhatsapp: "Abrir WhatsApp",
   },
   en: {
-    profile: "My Profile",
-    manage: "Manage your FRYD account and preferences.",
-    active: "Active",
-    statsTitle: "Your Statistics",
+    eyebrow: "YOUR SPACE",
+    profile: "Profile & settings",
+    manage: "Configure how FRYD looks, works with you, and which integrations are active.",
+    active: "Active account",
+    statsTitle: "Your activity",
     completed: "Completed",
     pending: "Pending",
-    activeHabits: "Active Habits",
-    diaryEntries: "Diary Entries",
-    completionRate: "Task Completion Rate",
+    activeHabits: "Active habits",
+    diaryEntries: "Diary entries",
+    completionRate: "Completion rate",
     accountTitle: "Account",
+    accountDesc: "Your identity inside FRYD.",
     username: "Username",
-    email: "Email Address",
+    email: "Email address",
     edit: "Edit",
     save: "Save",
     cancel: "Cancel",
-    preferencesTitle: "Preferences",
-    darkTheme: "Dark Theme",
-    darkThemeDesc: "Toggle light and dark mode",
+    preferencesTitle: "Experience",
+    preferencesDesc: "Adjust appearance, language and default assistant.",
+    darkTheme: "Appearance",
+    dark: "Dark",
+    light: "Light",
     langLabel: "Language",
-    langDesc: "Interface language",
-    aiLabel: "AI Assistant",
-    aiDesc: "Default AI provider",
-    focusLabel: "Account Focus",
-    focusDesc: "Customize visible tabs and tools",
+    aiLabel: "AI assistant",
+    focusLabel: "Account focus",
+    focusDesc: "FRYD uses this focus to prioritize tools and context.",
     personal: "Personal",
+    personalDesc: "Organization, wellbeing and personal goals.",
     trabajo: "Work",
+    trabajoDesc: "Projects, deliverables and professional productivity.",
     estudiante: "Student",
+    estudianteDesc: "Study, academic habits and pending work.",
     empleado: "Employee",
-    whatsappTitle: "WhatsApp Integration",
-    whatsappDesc: "Reminders & Task Bot",
-    whatsappDetails: "Receive notifications of pending tasks and chat with FRYD directly on WhatsApp using Twilio API.",
-    whatsappSteps: "Steps to connect:",
-    step1: "Find your Sandbox code in the Twilio console and enter it below.",
-    step2: "Scan the QR code on the right with your phone or click here.",
-    step3: "Send the WhatsApp message.",
-    step4: "Enter your WhatsApp number and activate reminders below.",
+    empleadoDesc: "Work routine, collaboration and daily progress.",
+    identityTitle: "Visual identity",
+    identityDesc: "Choose your avatar accent without changing FRYD's core identity.",
+    whatsappTitle: "WhatsApp",
+    whatsappDesc: "Reminders and fast task capture.",
+    whatsappConnected: "Configured",
+    whatsappInactive: "Not configured",
+    configure: "Configure",
+    integrationDesc: "Connect the Twilio Sandbox to receive reminders and chat with FRYD from WhatsApp.",
+    whatsappSteps: "Before saving",
+    step1: "Copy your Twilio Sandbox code (for example: join simple-giant).",
+    step2: "Scan the QR or open the link to send the join message.",
+    step3: "Add your number with country code and enable reminders.",
     qrLabel: "Scan to connect",
-    qrError: "Please enter a valid Sandbox code",
-    saveConfig: "Save Settings",
-    savedOk: "Settings saved successfully!",
-    logout: "Log Out",
-    aboutTitle: "About",
+    qrError: "Enter a valid Sandbox code to generate the QR.",
+    sandboxCode: "Sandbox code",
+    phone: "WhatsApp number",
+    reminders: "Active reminders",
+    remindersDesc: "Allow FRYD to send task alerts through WhatsApp.",
+    saveConfig: "Save integration",
+    savedOk: "Settings saved",
+    logout: "Log out",
+    aboutTitle: "FRYD",
+    aboutDesc: "Your personal workspace to organize, connect and move forward.",
     version: "Version",
     stack: "Stack",
-    philosophy: "Philosophy",
-    changeAvatarColor: "Profile Color"
-  }
+    philosophy: "Principle",
+    changeAvatarColor: "Profile color",
+    overviewTitle: "Workspace status",
+    overviewDesc: "A quick read of how you're using FRYD.",
+    taskHealth: "Task execution",
+    habitHealth: "Active habits",
+    journalHealth: "Saved reflections",
+    accountFocus: "Focus",
+    openWhatsapp: "Open WhatsApp",
+  },
 };
+
+type SettingCardProps = {
+  title: string;
+  description?: string;
+  icon: ReactNode;
+  children: ReactNode;
+};
+
+function SettingCard({ title, description, icon, children }: SettingCardProps) {
+  return (
+    <section className="card-static p-0 overflow-hidden">
+      <header className="flex items-start gap-3.5 px-5 py-4 border-b border-[var(--color-border-subtle)]">
+        <div className="w-9 h-9 rounded-xl brand-gradient-soft border border-[var(--color-border-accent)] flex items-center justify-center text-[var(--color-accent-primary)] flex-shrink-0">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">{title}</h2>
+          {description && <p className="text-xs text-[var(--color-text-muted)] mt-0.5 leading-relaxed">{description}</p>}
+        </div>
+      </header>
+      <div className="p-5">{children}</div>
+    </section>
+  );
+}
+
+function RowDivider() {
+  return <div className="h-px bg-[var(--color-border-subtle)]" />;
+}
+
+function CheckIcon({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
 
 export default function UserPage() {
   const { user, logout, updateUser, language, changeLanguage } = useAuth();
-  
+
   const [stats, setStats] = useState({
     totalTasks: 0,
     completedTasks: 0,
@@ -120,49 +203,37 @@ export default function UserPage() {
     diaryEntries: 0,
   });
 
-  // WhatsApp States
-  const [phoneNumber, setPhoneNumber] = useState(() => {
-    return localStorage.getItem("fryd_whatsapp_phone") || "";
-  });
-  const [whatsappActive, setWhatsappActive] = useState(() => {
-    return localStorage.getItem("fryd_whatsapp_active") === "true";
-  });
-  const [sandboxCode, setSandboxCode] = useState(() => {
-    return localStorage.getItem("fryd_whatsapp_sandbox") || "";
-  });
+  const [phoneNumber, setPhoneNumber] = useState(() => localStorage.getItem("fryd_whatsapp_phone") || "");
+  const [whatsappActive, setWhatsappActive] = useState(() => localStorage.getItem("fryd_whatsapp_active") === "true");
+  const [sandboxCode, setSandboxCode] = useState(() => localStorage.getItem("fryd_whatsapp_sandbox") || "");
+  const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
-  // Profile Customization States
-  const [avatarGradient, setAvatarGradient] = useState(() => {
-    return localStorage.getItem("fryd_avatar_gradient") || "linear-gradient(135deg, #818cf8 0%, #f472b6 100%)";
-  });
+  const [avatarGradient, setAvatarGradient] = useState(() =>
+    localStorage.getItem("fryd_avatar_gradient") || "linear-gradient(135deg, #6366f1 0%, #3b82f6 52%, #14b8a6 100%)"
+  );
 
-  // Username Editing States
   const [isEditingUsername, setIsEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState("");
   const [usernameError, setUsernameError] = useState("");
   const [usernameSuccess, setUsernameSuccess] = useState(false);
 
-  // Preference States
-  const [darkTheme, setDarkTheme] = useState(() => {
-    return localStorage.getItem("fryd_theme") !== "light";
-  });
+  const [darkTheme, setDarkTheme] = useState(() => localStorage.getItem("fryd_theme") !== "light");
   const [aiProvider, setAiProvider] = useState("ollama");
   const [profileFocus, setProfileFocus] = useState("personal");
 
-  // Sync state from user object when loaded
+  const t = language === "en" ? translations.en : translations.es;
+
   useEffect(() => {
-    if (user) {
-      setPhoneNumber(user.whatsapp_phone || "");
-      setWhatsappActive(!!user.whatsapp_active);
-      setSandboxCode(user.whatsapp_sandbox || "");
-      setUsernameInput(user.username || "");
-      setAiProvider(user.ai_provider || "ollama");
-      setProfileFocus(user.profile_focus || "personal");
-    }
+    if (!user) return;
+    setPhoneNumber(user.whatsapp_phone || "");
+    setWhatsappActive(!!user.whatsapp_active);
+    setSandboxCode(user.whatsapp_sandbox || "");
+    setUsernameInput(user.username || "");
+    setAiProvider(user.ai_provider || "ollama");
+    setProfileFocus(user.profile_focus || "personal");
   }, [user]);
 
-  // Sync theme changes to document
   useEffect(() => {
     if (darkTheme) {
       document.documentElement.classList.remove("light");
@@ -173,47 +244,78 @@ export default function UserPage() {
     }
   }, [darkTheme]);
 
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const [tasks, habits, entries] = await Promise.all([getTasks(), getHabits(), getDiaryEntries()]);
+        setStats({
+          totalTasks: tasks.length,
+          completedTasks: tasks.filter((task: { status: string }) => task.status === "completed").length,
+          activeHabits: habits.filter((habit: { status: string }) => habit.status === "active").length,
+          totalHabits: habits.length,
+          diaryEntries: entries.length,
+        });
+      } catch {
+        // Keep the profile useful even when one metric endpoint is unavailable.
+      }
+    };
+    loadStats();
+  }, []);
 
+  const completionRate = stats.totalTasks > 0 ? Math.round((stats.completedTasks / stats.totalTasks) * 100) : 0;
+  const pendingTasks = Math.max(stats.totalTasks - stats.completedTasks, 0);
+  const isValidSandbox = sandboxCode.trim().toLowerCase().startsWith("join ");
+  const whatsappConfigured = Boolean(phoneNumber || sandboxCode || whatsappActive);
 
-  // Sync AI Provider selection to backend
+  const focusOptions = useMemo(
+    () => [
+      { id: "personal", label: t.personal, description: t.personalDesc, glyph: "⌂" },
+      { id: "trabajo", label: t.trabajo, description: t.trabajoDesc, glyph: "▦" },
+      { id: "estudiante", label: t.estudiante, description: t.estudianteDesc, glyph: "◇" },
+      { id: "empleado", label: t.empleado, description: t.empleadoDesc, glyph: "◎" },
+    ],
+    [t]
+  );
+
+  const activeFocus = focusOptions.find((option) => option.id === profileFocus) || focusOptions[0];
+  const initials = (user?.username || user?.email || "FR")
+    .split(/[\s@._-]+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join("") || "FR";
+
   const handleAIProviderChange = async (provider: string) => {
     setAiProvider(provider);
     try {
       await updateUserSettings({ ai_provider: provider });
-      if (updateUser) {
-        updateUser({ ai_provider: provider });
-      }
+      updateUser?.({ ai_provider: provider });
     } catch (err) {
       console.error("Error saving AI provider preference:", err);
     }
   };
 
-  // Sync profile focus selection to backend
   const handleProfileFocusChange = async (focusVal: string) => {
     setProfileFocus(focusVal);
     try {
       await updateUserSettings({ profile_focus: focusVal });
-      if (updateUser) {
-        updateUser({ profile_focus: focusVal });
-      }
+      updateUser?.({ profile_focus: focusVal });
     } catch (err) {
       console.error("Error saving profile focus preference:", err);
     }
   };
 
-  // Update avatar gradient preference
   const handleGradientChange = (value: string) => {
     setAvatarGradient(value);
     localStorage.setItem("fryd_avatar_gradient", value);
     document.documentElement.style.setProperty("--profile-gradient", value);
   };
 
-  // Submit username update
   const handleSaveUsername = async () => {
     setUsernameError("");
     setUsernameSuccess(false);
-    
     const cleanUsername = usernameInput.trim();
+
     if (!cleanUsername) {
       setUsernameError(language === "en" ? "Username cannot be empty." : "El nombre de usuario no puede estar vacío.");
       return;
@@ -221,15 +323,13 @@ export default function UserPage() {
 
     try {
       await updateUserSettings({ username: cleanUsername });
-      if (updateUser) {
-        updateUser({ username: cleanUsername });
-      }
+      updateUser?.({ username: cleanUsername });
       setUsernameSuccess(true);
       setIsEditingUsername(false);
-      setTimeout(() => setUsernameSuccess(false), 2000);
+      window.setTimeout(() => setUsernameSuccess(false), 2200);
     } catch (err: any) {
-      const msg = err.response?.data?.detail || (language === "en" ? "Error updating username." : "Error al actualizar el nombre de usuario.");
-      setUsernameError(msg);
+      const message = err.response?.data?.detail || (language === "en" ? "Error updating username." : "Error al actualizar el nombre de usuario.");
+      setUsernameError(message);
     }
   };
 
@@ -238,478 +338,532 @@ export default function UserPage() {
       localStorage.setItem("fryd_whatsapp_phone", phoneNumber);
       localStorage.setItem("fryd_whatsapp_active", whatsappActive ? "true" : "false");
       localStorage.setItem("fryd_whatsapp_sandbox", sandboxCode);
-      
+
       await updateUserSettings({
         whatsapp_phone: phoneNumber,
         whatsapp_active: whatsappActive,
         whatsapp_sandbox: sandboxCode,
       });
 
-      if (updateUser) {
-        updateUser({
-          whatsapp_phone: phoneNumber,
-          whatsapp_active: whatsappActive,
-          whatsapp_sandbox: sandboxCode,
-        });
-      }
+      updateUser?.({
+        whatsapp_phone: phoneNumber,
+        whatsapp_active: whatsappActive,
+        whatsapp_sandbox: sandboxCode,
+      });
 
       setSavedMessage(true);
-      setTimeout(() => setSavedMessage(false), 2000);
+      window.setTimeout(() => {
+        setSavedMessage(false);
+        setWhatsappModalOpen(false);
+      }, 1200);
     } catch (err) {
       console.error("Error saving WhatsApp settings to backend:", err);
     }
   };
 
-  const loadStats = async () => {
-    try {
-      const [tasks, habits, entries] = await Promise.all([
-        getTasks(),
-        getHabits(),
-        getDiaryEntries(),
-      ]);
-      setStats({
-        totalTasks: tasks.length,
-        completedTasks: tasks.filter((t: { status: string }) => t.status === "completed").length,
-        activeHabits: habits.filter((h: { status: string }) => h.status === "active").length,
-        totalHabits: habits.length,
-        diaryEntries: entries.length,
-      });
-    } catch {
-      // Silent fail
-    }
-  };
-
-  useEffect(() => {
-    loadStats();
-  }, []);
-
-  const completionRate = stats.totalTasks > 0
-    ? Math.round((stats.completedTasks / stats.totalTasks) * 100)
-    : 0;
-
-  const isValidSandbox = sandboxCode.trim().toLowerCase().startsWith("join ");
-  const t = language === "en" ? translations.en : translations.es;
-
   return (
-    <div className="animate-fade-in max-w-3xl mx-auto">
-      {/* Profile header */}
-      <div className="card-static mb-6">
-        <div className="flex flex-col sm:flex-row items-center gap-5">
-          <div 
-            className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg transition-all duration-300 relative group overflow-hidden"
-            style={{ background: avatarGradient }}
-          >
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-              <circle cx="12" cy="7" r="4" />
-            </svg>
-          </div>
+    <div className="animate-fade-in max-w-7xl mx-auto">
+      <PageHeader eyebrow={t.eyebrow} title={t.profile} description={t.manage} />
 
-          <div className="text-center sm:text-left flex-1">
-            <h1 className="text-xl font-bold text-[var(--color-text-primary)]">{t.profile}</h1>
-            <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-              {t.manage}
-            </p>
-            
-            {/* Choose Profile Gradient Palette */}
-            <div className="mt-3 flex flex-wrap items-center justify-center sm:justify-start gap-2">
-              <span className="text-[11px] font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">{t.changeAvatarColor}:</span>
-              <div className="flex gap-1.5">
-                {GRADIENTS.map((g) => (
-                  <button
-                    key={g.id}
-                    onClick={() => handleGradientChange(g.value)}
-                    style={{ background: g.value }}
-                    title={g.label}
-                    className={`w-5 h-5 rounded-full cursor-pointer transition-transform duration-200 active:scale-95 ${
-                      avatarGradient === g.value ? "ring-2 ring-white ring-offset-2 ring-offset-[var(--color-surface-elevated)] scale-110" : "hover:scale-105"
-                    }`}
-                  />
-                ))}
+      <section className="relative overflow-hidden rounded-[1.4rem] border border-[var(--color-border-default)] bg-[var(--color-surface-card)] mb-5">
+        <div className="absolute inset-x-0 top-0 h-px brand-gradient" />
+        <div className="absolute -right-20 -top-24 w-72 h-72 rounded-full brand-gradient-soft blur-3xl opacity-70 pointer-events-none" />
+        <div className="relative p-5 sm:p-6 flex flex-col lg:flex-row lg:items-center gap-5">
+          <div className="flex items-center gap-4 min-w-0 flex-1">
+            <div
+              className="w-16 h-16 sm:w-[4.5rem] sm:h-[4.5rem] rounded-2xl flex items-center justify-center text-white text-xl font-bold tracking-tight shadow-lg flex-shrink-0"
+              style={{ background: avatarGradient }}
+              aria-label={`${t.changeAvatarColor}: ${initials}`}
+            >
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-[-0.03em] text-[var(--color-text-primary)] truncate">
+                  {user?.username || "FRYD User"}
+                </h2>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold text-[var(--color-accent-success)] bg-emerald-400/10 border border-emerald-400/15">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent-success)]" />
+                  {t.active}
+                </span>
+              </div>
+              <p className="text-sm text-[var(--color-text-secondary)] mt-1 truncate">{user?.email}</p>
+              <div className="flex flex-wrap items-center gap-2 mt-3">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] text-xs text-[var(--color-text-secondary)]">
+                  <span className="text-[var(--color-accent-primary)]">{activeFocus.glyph}</span>
+                  {activeFocus.label}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] text-xs text-[var(--color-text-muted)]">
+                  FRYD v1.0
+                </span>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center gap-2 mt-4 justify-center sm:justify-start">
-              <span className="badge badge-green">{t.active}</span>
-              <span className="text-xs text-[var(--color-text-muted)]">
-                FRYD v1.0
-              </span>
+          <div className="lg:w-[310px] rounded-2xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] px-4 py-3.5">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.16em] font-semibold text-[var(--color-text-muted)]">{t.completionRate}</p>
+                <p className="text-2xl font-bold tracking-[-0.04em] text-[var(--color-text-primary)] mt-1">{completionRate}%</p>
+              </div>
+              <div className="w-11 h-11 rounded-xl brand-gradient-soft border border-[var(--color-border-accent)] text-[var(--color-accent-primary)] flex items-center justify-center">
+                <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19V9M10 19V5M16 19v-7M22 19H2" />
+                </svg>
+              </div>
+            </div>
+            <div className="mt-3 h-2 rounded-full bg-[var(--color-surface-base)] overflow-hidden">
+              <div className="h-full brand-gradient rounded-full transition-all duration-700" style={{ width: `${completionRate}%` }} />
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Stats */}
-      <div className="mb-6">
-        <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-          {t.statsTitle}
-        </h2>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="card-static text-center py-4">
-            <p className="text-2xl font-bold text-[var(--color-accent-primary)]">{stats.completedTasks}</p>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{t.completed}</p>
-          </div>
-          <div className="card-static text-center py-4">
-            <p className="text-2xl font-bold text-[var(--color-accent-warning)]">{stats.totalTasks - stats.completedTasks}</p>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{t.pending}</p>
-          </div>
-          <div className="card-static text-center py-4">
-            <p className="text-2xl font-bold text-[var(--color-accent-secondary)]">{stats.activeHabits}</p>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{t.activeHabits}</p>
-          </div>
-          <div className="card-static text-center py-4">
-            <p className="text-2xl font-bold text-[var(--color-accent-tertiary)]">{stats.diaryEntries}</p>
-            <p className="text-[11px] text-[var(--color-text-muted)] mt-1">{t.diaryEntries}</p>
-          </div>
+      <section className="mb-6">
+        <p className="fryd-section-label mb-3">{t.statsTitle}</p>
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-x-3 gap-y-6">
+          <StatTile
+            label={t.completed}
+            value={stats.completedTasks}
+            detail={stats.totalTasks ? `${completionRate}% ${language === "en" ? "of tasks" : "de tus tareas"}` : undefined}
+            tone="success"
+            icon={<CheckIcon />}
+          />
+          <StatTile
+            label={t.pending}
+            value={pendingTasks}
+            detail={language === "en" ? "Open tasks" : "Tareas abiertas"}
+            tone="warning"
+            icon={<span className="text-base">○</span>}
+          />
+          <StatTile
+            label={t.activeHabits}
+            value={stats.activeHabits}
+            detail={stats.totalHabits ? `${stats.activeHabits}/${stats.totalHabits} ${language === "en" ? "active" : "activos"}` : undefined}
+            tone="brand"
+            icon={<span className="text-base">◎</span>}
+          />
+          <StatTile
+            label={t.diaryEntries}
+            value={stats.diaryEntries}
+            detail={language === "en" ? "Saved reflections" : "Reflexiones guardadas"}
+            tone="muted"
+            icon={<span className="text-base">◇</span>}
+          />
         </div>
+      </section>
 
-        {/* Progress */}
-        <div className="card-static mt-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-[var(--color-text-secondary)]">{t.completionRate}</span>
-            <span className="text-sm font-bold text-[var(--color-accent-primary)]">{completionRate}%</span>
-          </div>
-          <div className="w-full h-2 bg-[var(--color-surface-input)] rounded-full overflow-hidden">
-            <div
-              className="h-full gradient-green rounded-full transition-all duration-700"
-              style={{ width: `${completionRate}%` }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Settings sections */}
-      <div className="space-y-4">
-        {/* Account */}
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-            {t.accountTitle}
-          </h2>
-          <div className="card-static">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_330px] gap-x-5 gap-y-9 items-start">
+        <div className="space-y-8">
+          <SettingCard
+            title={t.accountTitle}
+            description={t.accountDesc}
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            }
+          >
             <div className="space-y-4">
               <div>
-                <div className="flex justify-between items-center mb-1.5">
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] block">{t.username}</label>
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <label className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.username}</label>
                   {!isEditingUsername ? (
                     <button
+                      type="button"
                       onClick={() => {
                         setUsernameInput(user?.username || "");
                         setIsEditingUsername(true);
+                        setUsernameError("");
                       }}
-                      className="text-xs font-semibold text-[var(--color-accent-primary)] hover:underline cursor-pointer"
+                      className="text-xs font-semibold text-[var(--color-accent-primary)] hover:text-[var(--color-accent-secondary)] transition-colors cursor-pointer"
                     >
                       {t.edit}
                     </button>
                   ) : (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleSaveUsername}
-                        className="text-xs font-semibold text-[var(--color-accent-primary)] hover:underline cursor-pointer"
-                      >
+                    <div className="flex items-center gap-3">
+                      <button type="button" onClick={handleSaveUsername} className="text-xs font-semibold text-[var(--color-accent-primary)] cursor-pointer">
                         {t.save}
                       </button>
                       <button
+                        type="button"
                         onClick={() => {
                           setIsEditingUsername(false);
                           setUsernameError("");
+                          setUsernameInput(user?.username || "");
                         }}
-                        className="text-xs font-semibold text-[var(--color-text-muted)] hover:underline cursor-pointer"
+                        className="text-xs font-medium text-[var(--color-text-muted)] cursor-pointer"
                       >
                         {t.cancel}
                       </button>
                     </div>
                   )}
                 </div>
-                {isEditingUsername ? (
+                <div className="relative">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                    <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
+                  </svg>
                   <input
                     type="text"
-                    className="fryd-input focus:border-[var(--color-accent-primary)]"
-                    value={usernameInput}
-                    onChange={(e) => setUsernameInput(e.target.value)}
+                    className={`fryd-input !pl-10 ${!isEditingUsername ? "opacity-75 cursor-not-allowed" : ""}`}
+                    value={isEditingUsername ? usernameInput : user?.username || ""}
+                    onChange={(event) => setUsernameInput(event.target.value)}
+                    disabled={!isEditingUsername}
                   />
-                ) : (
-                  <input
-                    type="text"
-                    className="fryd-input opacity-80 cursor-not-allowed bg-[var(--color-surface-input)]/50"
-                    value={user?.username || ""}
-                    disabled
-                  />
-                )}
-                {usernameError && (
-                  <p className="text-xs text-red-400 mt-1 font-semibold">{usernameError}</p>
-                )}
+                </div>
+                {usernameError && <p className="text-xs text-[var(--color-accent-danger)] mt-2 font-medium">{usernameError}</p>}
                 {usernameSuccess && (
-                  <p className="text-xs text-emerald-400 mt-1 font-semibold animate-pulse">
-                    {language === "en" ? "Username updated successfully!" : "¡Nombre de usuario actualizado!"}
+                  <p className="text-xs text-[var(--color-accent-success)] mt-2 font-medium flex items-center gap-1.5">
+                    <CheckIcon size={13} />
+                    {language === "en" ? "Username updated." : "Nombre de usuario actualizado."}
                   </p>
                 )}
               </div>
 
               <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">{t.email}</label>
-                <input
-                  type="email"
-                  className="fryd-input opacity-80 cursor-not-allowed bg-[var(--color-surface-input)]/50"
-                  value={user?.email || ""}
-                  disabled
-                />
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2 block">{t.email}</label>
+                <div className="relative">
+                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)] pointer-events-none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="5" width="18" height="14" rx="2" /><path d="m3 7 9 6 9-6" />
+                  </svg>
+                  <input type="email" className="fryd-input !pl-10 opacity-75 cursor-not-allowed" value={user?.email || ""} disabled />
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          </SettingCard>
 
-        {/* Preferences */}
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-            {t.preferencesTitle}
-          </h2>
-          <div className="card-static">
+          <SettingCard
+            title={t.preferencesTitle}
+            description={t.preferencesDesc}
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" /><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.86 2.86-.06-.06A1.7 1.7 0 0 0 15 19.4a1.7 1.7 0 0 0-1 .6 1.7 1.7 0 0 0-.4 1.1V21h-4v-.09A1.7 1.7 0 0 0 8 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.86-2.86.06-.06A1.7 1.7 0 0 0 3.6 15a1.7 1.7 0 0 0-.6-1 1.7 1.7 0 0 0-1.1-.4H2v-4h.09A1.7 1.7 0 0 0 3.6 8a1.7 1.7 0 0 0-.34-1.88l-.06-.06L6.06 3.2l.06.06A1.7 1.7 0 0 0 8 3.6a1.7 1.7 0 0 0 1-.6 1.7 1.7 0 0 0 .4-1.1V2h4v.09A1.7 1.7 0 0 0 15 3.6a1.7 1.7 0 0 0 1.88-.34l.06-.06 2.86 2.86-.06.06A1.7 1.7 0 0 0 19.4 8c.13.37.35.71.64.98.3.27.67.43 1.06.47H21v4h-.09a1.7 1.7 0 0 0-1.51 1.55Z" />
+              </svg>
+            }
+          >
             <div className="space-y-4">
-              {/* Theme Toggle */}
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-[var(--color-text-primary)]">{t.darkTheme}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">{t.darkThemeDesc}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{language === "en" ? "Choose the workspace surface." : "Elige la superficie general del workspace."}</p>
                 </div>
-                <button
-                  onClick={() => setDarkTheme(!darkTheme)}
-                  className={`w-11 h-6 rounded-full flex items-center px-0.5 cursor-pointer transition-colors duration-300 ${
-                    darkTheme ? "bg-[var(--color-accent-primary)]" : "bg-slate-300 dark:bg-slate-700"
-                  }`}
-                >
-                  <div className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-300 ${
-                    darkTheme ? "translate-x-5" : "translate-x-0"
-                  }`} />
-                </button>
+                <div className="inline-flex p-1 rounded-xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setDarkTheme(true)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${darkTheme ? "bg-[var(--color-surface-elevated)] text-[var(--color-text-primary)] shadow-sm" : "text-[var(--color-text-muted)]"}`}
+                  >
+                    {t.dark}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDarkTheme(false)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${!darkTheme ? "bg-[var(--color-surface-elevated)] text-[var(--color-text-primary)] shadow-sm" : "text-[var(--color-text-muted)]"}`}
+                  >
+                    {t.light}
+                  </button>
+                </div>
               </div>
 
-              <div className="border-t border-[var(--color-border-subtle)]" />
+              <RowDivider />
 
-              {/* Language Switcher */}
-              <div className="flex items-center justify-between">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm font-medium text-[var(--color-text-primary)]">{t.langLabel}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">{t.langDesc}</p>
+                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2 block">{t.langLabel}</label>
+                  <select value={language} onChange={(event) => changeLanguage(event.target.value)} className="fryd-input cursor-pointer">
+                    <option value="es">Español</option>
+                    <option value="en">English</option>
+                  </select>
                 </div>
-                <select
-                  value={language}
-                  onChange={(e) => changeLanguage(e.target.value)}
-                  className="bg-[var(--color-surface-input)] border border-[var(--color-border-default)] rounded-lg text-xs text-[var(--color-text-primary)] px-2.5 py-1.5 font-medium focus:ring-[var(--color-accent-primary)] cursor-pointer"
-                >
-                  <option value="es">Español</option>
-                  <option value="en">English</option>
-                </select>
-              </div>
-
-              <div className="border-t border-[var(--color-border-subtle)]" />
-
-              {/* AI Provider selector */}
-              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-[var(--color-text-primary)]">{t.aiLabel}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">{t.aiDesc}</p>
+                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2 block">{t.aiLabel}</label>
+                  <select value={aiProvider} onChange={(event) => handleAIProviderChange(event.target.value)} className="fryd-input cursor-pointer">
+                    <option value="ollama">Ollama</option>
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                    <option value="gemini">Gemini</option>
+                  </select>
                 </div>
-                <select
-                  value={aiProvider}
-                  onChange={(e) => handleAIProviderChange(e.target.value)}
-                  className="bg-[var(--color-surface-input)] border border-[var(--color-border-default)] rounded-lg text-xs text-[var(--color-text-primary)] px-2.5 py-1.5 font-medium focus:ring-[var(--color-accent-primary)] cursor-pointer"
-                >
-                  <option value="ollama">🦙 Ollama</option>
-                  <option value="openai">🤖 OpenAI</option>
-                  <option value="anthropic">🧠 Anthropic</option>
-                  <option value="gemini">✨ Gemini</option>
-                </select>
-              </div>
-
-              <div className="border-t border-[var(--color-border-subtle)]" />
-
-              {/* Account Focus selector */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-[var(--color-text-primary)]">{t.focusLabel}</p>
-                  <p className="text-xs text-[var(--color-text-muted)]">{t.focusDesc}</p>
-                </div>
-                <select
-                  value={profileFocus}
-                  onChange={(e) => handleProfileFocusChange(e.target.value)}
-                  className="bg-[var(--color-surface-input)] border border-[var(--color-border-default)] rounded-lg text-xs text-[var(--color-text-primary)] px-2.5 py-1.5 font-medium focus:ring-[var(--color-accent-primary)] cursor-pointer"
-                >
-                  <option value="personal">🏠 {t.personal}</option>
-                  <option value="trabajo">💼 {t.trabajo}</option>
-                  <option value="estudiante">🎓 {t.estudiante}</option>
-                  <option value="empleado">👔 {t.empleado}</option>
-                </select>
               </div>
             </div>
-          </div>
-        </div>
+          </SettingCard>
 
-        {/* WhatsApp Integration */}
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-            {t.whatsappTitle}
-          </h2>
-          <div className="card-static">
-            <div className="space-y-4">
-              <div className="flex items-start gap-3.5 mb-2">
-                <span className="text-2xl">💬</span>
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t.whatsappDesc}</h3>
-                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5 leading-relaxed">
-                    {t.whatsappDetails}
+          <SettingCard
+            title={t.focusLabel}
+            description={t.focusDesc}
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2" />
+              </svg>
+            }
+          >
+            <div className="grid sm:grid-cols-2 gap-3">
+              {focusOptions.map((option) => {
+                const selected = option.id === profileFocus;
+                return (
+                  <button
+                    key={option.id}
+                    type="button"
+                    onClick={() => handleProfileFocusChange(option.id)}
+                    className={`text-left rounded-2xl border p-4 transition-all cursor-pointer ${
+                      selected
+                        ? "border-[var(--color-border-accent)] brand-gradient-soft shadow-[0_10px_30px_rgba(99,102,241,0.08)]"
+                        : "border-[var(--color-border-subtle)] bg-[var(--color-surface-input)] hover:border-[var(--color-border-default)]"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-base ${selected ? "brand-gradient text-white" : "bg-[var(--color-surface-elevated)] text-[var(--color-text-secondary)]"}`}>
+                        {option.glyph}
+                      </div>
+                      <span className={`w-5 h-5 rounded-full border flex items-center justify-center ${selected ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary)] text-white" : "border-[var(--color-border-default)]"}`}>
+                        {selected && <CheckIcon size={12} />}
+                      </span>
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-3">{option.label}</p>
+                    <p className="text-xs text-[var(--color-text-muted)] mt-1 leading-relaxed">{option.description}</p>
+                  </button>
+                );
+              })}
+            </div>
+          </SettingCard>
+
+          <SettingCard
+            title={t.whatsappTitle}
+            description={t.integrationDesc}
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.8 9.8 0 0 1-4-.8L3 21l1.8-4.3a8.7 8.7 0 1 1 16.2-5.2Z" /><path d="M8.8 8.4c.5 2.5 2.3 4.3 4.8 4.8" />
+              </svg>
+            }
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${whatsappConfigured ? "bg-emerald-400/10 text-[var(--color-accent-success)] border border-emerald-400/15" : "bg-[var(--color-surface-input)] text-[var(--color-text-muted)] border border-[var(--color-border-subtle)]"}`}>
+                  {whatsappConfigured ? <CheckIcon /> : <span className="text-lg">＋</span>}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[var(--color-text-primary)]">{t.whatsappDesc}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">
+                    {whatsappConfigured ? t.whatsappConnected : t.whatsappInactive}
+                    {phoneNumber ? ` · ${phoneNumber}` : ""}
                   </p>
                 </div>
               </div>
+              <button type="button" onClick={() => setWhatsappModalOpen(true)} className="btn-secondary text-xs self-start sm:self-auto">
+                {t.configure}
+              </button>
+            </div>
+          </SettingCard>
+        </div>
 
-              <div className="border-t border-[var(--color-border-subtle)] pt-4 flex flex-col md:flex-row gap-5 items-center">
-                <div className="flex-1 space-y-3">
-                  <h4 className="text-xs font-semibold text-[var(--color-accent-primary)] uppercase tracking-wider">
-                    {t.whatsappSteps}
-                  </h4>
-                  <ol className="list-decimal list-inside text-xs text-[var(--color-text-secondary)] space-y-2 pl-1 leading-relaxed">
-                    <li>{t.step1}</li>
-                    <li>
-                      {isValidSandbox ? (
-                        <>
-                          {t.step2.replace("aquí", "")}
-                          <a
-                            href={`https://wa.me/14155238886?text=${encodeURIComponent(sandboxCode)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[var(--color-accent-primary)] hover:underline font-semibold cursor-pointer"
-                          >
-                            {language === "en" ? "here" : "aquí"}
-                          </a>.
-                        </>
-                      ) : (
-                        <span className="text-[var(--color-text-muted)]">
-                          {language === "en" ? "(Enter sandbox code first to enable link)" : "(Ingresa primero un código Sandbox válido abajo para habilitar el código QR/enlace)"}
-                        </span>
-                      )}
-                    </li>
-                    <li>{t.step3}</li>
-                    <li>{t.step4}</li>
-                  </ol>
-                </div>
-
-                <div className="flex flex-col items-center p-3 rounded-2xl bg-white/5 border border-white/10 flex-shrink-0 w-[150px] min-h-[170px] justify-center">
-                  {isValidSandbox ? (
-                    <>
-                      <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=130x130&data=${encodeURIComponent(
-                          `https://wa.me/14155238886?text=${encodeURIComponent(sandboxCode)}`
-                        )}&color=059669&bgcolor=ffffff`}
-                        alt="WhatsApp QR Code"
-                        className="w-[120px] h-[120px] rounded-lg shadow-md border-2 border-white"
-                      />
-                      <span className="text-[10px] text-[var(--color-text-muted)] mt-2 font-medium">
-                        {t.qrLabel}
-                      </span>
-                    </>
-                  ) : (
-                    <div className="text-center p-2">
-                      <span className="text-2xl block mb-2">⚠️</span>
-                      <span className="text-[10px] text-[var(--color-text-muted)] font-medium leading-tight block">
-                        {t.qrError}
-                      </span>
-                    </div>
-                  )}
+        <aside className="space-y-8 xl:sticky xl:top-6">
+          <SettingCard
+            title={t.identityTitle}
+            description={t.identityDesc}
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="13.5" cy="6.5" r=".5" fill="currentColor" /><circle cx="17.5" cy="10.5" r=".5" fill="currentColor" /><circle cx="8.5" cy="7.5" r=".5" fill="currentColor" /><circle cx="6.5" cy="12.5" r=".5" fill="currentColor" /><path d="M12 22a10 10 0 1 1 10-10c0 2.2-1.8 4-4 4h-1.8a2 2 0 0 0-1.7 3l.2.4A1.8 1.8 0 0 1 13.1 22H12Z" />
+              </svg>
+            }
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white font-bold flex-shrink-0" style={{ background: avatarGradient }}>
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-[var(--color-text-secondary)]">{t.changeAvatarColor}</p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {GRADIENTS.map((gradient) => (
+                    <button
+                      key={gradient.id}
+                      type="button"
+                      onClick={() => handleGradientChange(gradient.value)}
+                      title={gradient.label}
+                      aria-label={gradient.label}
+                      style={{ background: gradient.value }}
+                      className={`w-6 h-6 rounded-full cursor-pointer transition-transform ${avatarGradient === gradient.value ? "ring-2 ring-[var(--color-text-primary)] ring-offset-2 ring-offset-[var(--color-surface-card)] scale-110" : "hover:scale-110"}`}
+                    />
+                  ))}
                 </div>
               </div>
+            </div>
+          </SettingCard>
 
-              <div className="border-t border-[var(--color-border-subtle)] pt-4 space-y-4">
+          <SettingCard
+            title={t.overviewTitle}
+            description={t.overviewDesc}
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v18h18" /><path d="m7 16 4-5 3 3 5-7" />
+              </svg>
+            }
+          >
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between text-xs mb-2">
+                  <span className="text-[var(--color-text-secondary)]">{t.taskHealth}</span>
+                  <span className="font-semibold text-[var(--color-text-primary)]">{completionRate}%</span>
+                </div>
+                <div className="h-2 rounded-full bg-[var(--color-surface-input)] overflow-hidden">
+                  <div className="h-full brand-gradient rounded-full" style={{ width: `${completionRate}%` }} />
+                </div>
+              </div>
+              <RowDivider />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] p-3">
+                  <p className="text-[11px] text-[var(--color-text-muted)]">{t.habitHealth}</p>
+                  <p className="text-lg font-bold text-[var(--color-text-primary)] mt-1">{stats.activeHabits}</p>
+                </div>
+                <div className="rounded-xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] p-3">
+                  <p className="text-[11px] text-[var(--color-text-muted)]">{t.journalHealth}</p>
+                  <p className="text-lg font-bold text-[var(--color-text-primary)] mt-1">{stats.diaryEntries}</p>
+                </div>
+              </div>
+              <div className="rounded-xl brand-gradient-soft border border-[var(--color-border-accent)] p-3">
+                <p className="text-[11px] uppercase tracking-[0.14em] font-semibold text-[var(--color-text-muted)]">{t.accountFocus}</p>
+                <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-1">{activeFocus.label}</p>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1 leading-relaxed">{activeFocus.description}</p>
+              </div>
+            </div>
+          </SettingCard>
+
+          <SettingCard
+            title={t.aboutTitle}
+            description={t.aboutDesc}
+            icon={
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
+              </svg>
+            }
+          >
+            <div className="space-y-3 text-xs">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[var(--color-text-muted)]">{t.version}</span>
+                <span className="font-semibold text-[var(--color-text-primary)]">1.0.0</span>
+              </div>
+              <RowDivider />
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[var(--color-text-muted)]">{t.stack}</span>
+                <span className="font-semibold text-[var(--color-text-primary)] text-right">React + FastAPI</span>
+              </div>
+              <RowDivider />
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[var(--color-text-muted)]">{t.philosophy}</span>
+                <span className="font-semibold brand-gradient-text">Organiza · Avanza · Logra</span>
+              </div>
+            </div>
+          </SettingCard>
+
+          <button
+            type="button"
+            onClick={logout}
+            className="w-full px-4 py-3 rounded-xl border border-red-400/15 bg-red-400/[0.04] hover:bg-red-400/[0.08] text-red-400 font-semibold text-sm transition-all cursor-pointer active:scale-[0.99] flex items-center justify-center gap-2"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M10 17l5-5-5-5" /><path d="M15 12H3" /><path d="M21 19V5a2 2 0 0 0-2-2h-6" />
+            </svg>
+            {t.logout}
+          </button>
+        </aside>
+      </div>
+
+      <Modal
+        open={whatsappModalOpen}
+        onClose={() => setWhatsappModalOpen(false)}
+        title={t.whatsappTitle}
+        description={t.integrationDesc}
+        icon={
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 11.5a8.4 8.4 0 0 1-9 8.5 9.8 9.8 0 0 1-4-.8L3 21l1.8-4.3a8.7 8.7 0 1 1 16.2-5.2Z" /><path d="M8.8 8.4c.5 2.5 2.3 4.3 4.8 4.8" />
+          </svg>
+        }
+        footer={
+          <>
+            <button type="button" onClick={() => setWhatsappModalOpen(false)} className="btn-secondary">
+              {t.cancel}
+            </button>
+            <button type="button" onClick={handleSaveWhatsapp} className="btn-primary">
+              {savedMessage ? <><CheckIcon /> {t.savedOk}</> : t.saveConfig}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-5">
+          <div className="rounded-2xl brand-gradient-soft border border-[var(--color-border-accent)] p-4">
+            <p className="text-xs font-semibold text-[var(--color-text-primary)]">{t.whatsappSteps}</p>
+            <ol className="mt-2.5 space-y-2 text-xs text-[var(--color-text-secondary)] leading-relaxed list-decimal pl-4">
+              <li>{t.step1}</li>
+              <li>{t.step2}</li>
+              <li>{t.step3}</li>
+            </ol>
+          </div>
+
+          <div className="grid md:grid-cols-[minmax(0,1fr)_170px] gap-5 items-start">
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2 block">{t.sandboxCode}</label>
+                <input
+                  type="text"
+                  value={sandboxCode}
+                  onChange={(event) => setSandboxCode(event.target.value)}
+                  placeholder="join simple-giant"
+                  className="fryd-input font-mono"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-2 block">{t.phone}</label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(event) => setPhoneNumber(event.target.value)}
+                  placeholder="+5215512345678"
+                  className="fryd-input font-mono"
+                />
+              </div>
+              <label className="flex items-center justify-between gap-4 rounded-xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] p-3.5 cursor-pointer">
                 <div>
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1 block">
-                    {language === "en" ? "Your Sandbox Code (e.g. join simple-giant)" : "Tu código Sandbox (Ej. join simple-giant)"}
-                  </label>
-                  <input
-                    type="text"
-                    value={sandboxCode}
-                    onChange={(e) => setSandboxCode(e.target.value)}
-                    placeholder="join simple-giant"
-                    className="fryd-input font-mono text-xs py-1.5"
-                  />
+                  <p className="text-sm font-medium text-[var(--color-text-primary)]">{t.reminders}</p>
+                  <p className="text-xs text-[var(--color-text-muted)] mt-0.5">{t.remindersDesc}</p>
                 </div>
+                <input
+                  type="checkbox"
+                  checked={whatsappActive}
+                  onChange={(event) => setWhatsappActive(event.target.checked)}
+                  className="h-5 w-5 rounded border-white/20 bg-white/5 text-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)] cursor-pointer"
+                />
+              </label>
+            </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-[var(--color-text-secondary)] mb-1 block">
-                    {language === "en" ? "Your WhatsApp Number (with country code)" : "Tu número de WhatsApp (con código de país)"}
-                  </label>
-                  <input
-                    type="tel"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
-                    placeholder="Ej. +5215512345678"
-                    className="fryd-input font-mono text-xs py-1.5"
+            <div className="rounded-2xl bg-[var(--color-surface-input)] border border-[var(--color-border-subtle)] p-3 min-h-[170px] flex flex-col items-center justify-center text-center">
+              {isValidSandbox ? (
+                <>
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(`https://wa.me/14155238886?text=${encodeURIComponent(sandboxCode)}`)}&color=0f172a&bgcolor=ffffff`}
+                    alt="WhatsApp QR Code"
+                    className="w-[132px] h-[132px] rounded-xl border-4 border-white shadow-sm"
                   />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--color-text-primary)]">{language === "en" ? "Active Reminders" : "Recordatorios Activos"}</p>
-                    <p className="text-xs text-[var(--color-text-muted)]">{language === "en" ? "Allow task alerts to be sent" : "Permitir envíos de alertas de tareas"}</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={whatsappActive}
-                    onChange={(e) => setWhatsappActive(e.target.checked)}
-                    className="h-5 w-5 rounded border-white/20 bg-white/5 text-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary)] cursor-pointer"
-                  />
-                </div>
-
-                <div className="flex items-center gap-3 pt-1">
-                  <button
-                    onClick={handleSaveWhatsapp}
-                    className="btn-primary py-1.5 px-4 text-xs cursor-pointer"
+                  <a
+                    href={`https://wa.me/14155238886?text=${encodeURIComponent(sandboxCode)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2.5 text-[11px] font-semibold text-[var(--color-accent-primary)] hover:underline"
                   >
-                    {t.saveConfig}
-                  </button>
-                  {savedMessage && (
-                    <span className="text-xs text-emerald-400 font-semibold animate-pulse">
-                      {t.savedOk}
-                    </span>
-                  )}
-                </div>
-              </div>
+                    {t.openWhatsapp}
+                  </a>
+                </>
+              ) : (
+                <>
+                  <div className="w-10 h-10 rounded-xl bg-[var(--color-surface-elevated)] text-[var(--color-text-muted)] flex items-center justify-center mb-2">
+                    <span className="text-lg">⌁</span>
+                  </div>
+                  <p className="text-[11px] text-[var(--color-text-muted)] leading-relaxed">{t.qrError}</p>
+                </>
+              )}
             </div>
           </div>
         </div>
-
-        {/* About */}
-        <div>
-          <h2 className="text-sm font-semibold text-[var(--color-text-secondary)] uppercase tracking-wider mb-3">
-            {t.aboutTitle}
-          </h2>
-          <div className="card-static">
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--color-text-secondary)]">{t.version}</span>
-                <span className="text-sm font-medium text-[var(--color-text-primary)]">1.0.0</span>
-              </div>
-              <div className="border-t border-[var(--color-border-subtle)]" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--color-text-secondary)]">{t.stack}</span>
-                <span className="text-sm font-medium text-[var(--color-text-primary)]">React + FastAPI</span>
-              </div>
-              <div className="border-t border-[var(--color-border-subtle)]" />
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-[var(--color-text-secondary)]">{t.philosophy}</span>
-                <span className="text-sm text-[var(--color-accent-primary)] font-medium">Focus. Reflect. Build.</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Logout Action */}
-      <div className="mt-8 mb-8 flex justify-center">
-        <button
-          onClick={logout}
-          className="px-6 py-3 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 text-red-400 font-semibold text-sm hover:border-red-500/30 transition-all cursor-pointer active:scale-[0.98]"
-        >
-          {t.logout}
-        </button>
-      </div>
+      </Modal>
     </div>
   );
 }

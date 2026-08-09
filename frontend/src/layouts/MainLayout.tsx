@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
+import BrandMark from "../components/BrandMark";
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -9,23 +10,25 @@ const translations = {
     "/task": "Tareas",
     "/habit": "Hábitos",
     "/diary": "Diario",
-    "/assistant": "Asistente",
+    "/assistant": "Cerebro Digital",
+    "/analytics": "Analíticas",
     "/projects": "Proyectos",
     "/user": "Mi Perfil",
-    "openMenu": "Abrir menú",
-    "offlineBanner": "Modo sin conexión — Los cambios se sincronizarán al recuperar conexión"
+    openMenu: "Abrir menú",
+    offlineBanner: "Modo sin conexión — Los cambios se sincronizarán al recuperar conexión",
   },
   en: {
     "/": "Home",
     "/task": "Tasks",
     "/habit": "Habits",
     "/diary": "Diary",
-    "/assistant": "Assistant",
+    "/assistant": "Digital Brain",
+    "/analytics": "Analytics",
     "/projects": "Projects",
     "/user": "My Profile",
-    "openMenu": "Open menu",
-    "offlineBanner": "Offline Mode — Changes will sync when online"
-  }
+    openMenu: "Open menu",
+    offlineBanner: "Offline Mode — Changes will sync when online",
+  },
 };
 
 export default function MainLayout() {
@@ -33,9 +36,10 @@ export default function MainLayout() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const location = useLocation();
   const { language } = useAuth();
-  
+
   const t = language === "en" ? translations.en : translations.es;
   const title = t[location.pathname as keyof typeof t] || "FRYD";
+  const isFullBleed = location.pathname === "/assistant";
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -51,24 +55,20 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[var(--color-surface-base)]">
-      {/* Sidebar */}
+    <div className="flex h-screen overflow-hidden app-shell-background">
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Offline Banner */}
       {!isOnline && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[9999]">
-          <div className="flex items-center gap-2.5 px-4 py-2 rounded-full border border-amber-500/20 bg-[var(--color-surface-card)]/90 backdrop-blur-md text-amber-400 text-xs font-semibold shadow-lg shadow-black/40 animate-fade-in">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-full border border-amber-500/20 bg-[var(--color-surface-card)]/90 backdrop-blur-md text-amber-300 text-xs font-semibold shadow-lg shadow-black/40 animate-fade-in">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             <span>{t.offlineBanner}</span>
           </div>
         </div>
       )}
 
-      {/* Main content area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Mobile header */}
-        <header className="lg:hidden flex items-center h-[var(--header-height)] px-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-elevated)] flex-shrink-0">
+        <header className="lg:hidden flex items-center h-[var(--header-height)] px-4 border-b border-[var(--color-border-subtle)] bg-[rgba(8,14,27,0.92)] backdrop-blur-xl flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="btn-ghost p-2 -ml-2"
@@ -81,20 +81,12 @@ export default function MainLayout() {
             </svg>
           </button>
 
-          <h1 className="ml-3 text-base font-semibold text-[var(--color-text-primary)]">
-            {title}
-          </h1>
-
-          <div className="ml-auto flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full gradient-green flex items-center justify-center">
-              <span className="text-xs font-bold text-[var(--color-text-inverse)]">F</span>
-            </div>
-          </div>
+          <h1 className="ml-3 text-base font-semibold text-[var(--color-text-primary)]">{title}</h1>
+          <div className="ml-auto"><BrandMark compact /></div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
-          <div className="content-container">
+        <main className="flex-1 min-h-0 overflow-y-auto">
+          <div className={isFullBleed ? "content-container-full" : "content-container"}>
             <Outlet />
           </div>
         </main>

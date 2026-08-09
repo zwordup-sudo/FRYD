@@ -27,6 +27,10 @@ import {
   Cell,
 } from "recharts";
 import KanbanBoard from "./KanbanBoard";
+import PageHeader from "../../components/ui/PageHeader";
+import Modal from "../../components/ui/Modal";
+import SegmentedTabs from "../../components/ui/SegmentedTabs";
+import StatTile from "../../components/ui/StatTile";
 
 
 // SVG Icons
@@ -61,10 +65,12 @@ const ClipboardIcon = () => (
   </svg>
 );
 
+type ProjectTabKey = "overview" | "board" | "feed" | "leaderboard" | "analytics";
+
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState<any | null>(null);
-  const [activeTab, setActiveTab] = useState<"overview" | "board" | "feed" | "leaderboard" | "analytics">("overview");
+  const [activeTab, setActiveTab] = useState<ProjectTabKey>("overview");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -441,8 +447,28 @@ export default function ProjectsPage() {
     return selectedProject.custom_columns.split(",");
   };
 
+  const averageProjectProgress = projects.length
+    ? Math.round(projects.reduce((sum, project) => sum + Number(project.task_progress || 0), 0) / projects.length)
+    : 0;
+  const totalProjectMembers = projects.reduce((sum, project) => sum + Number(project.member_count || 0), 0);
+  const methodologyCount = new Set(projects.map((project) => project.methodology)).size;
+  const completedProjectTasks = projectTasksList.filter((task) => task.completed).length;
+  const selectedProjectProgress = projectTasksList.length
+    ? Math.round((completedProjectTasks / projectTasksList.length) * 100)
+    : Number(selectedProject?.task_progress || 0);
+
+  const projectTabs: Array<{ key: ProjectTabKey; label: string; count?: number }> = [
+    { key: "overview" as const, label: "Resumen" },
+    { key: "board" as const, label: "Tablero" },
+    { key: "feed" as const, label: "Feed", count: projectFeedList.length },
+    { key: "leaderboard" as const, label: "Equipo", count: projectMembers.length },
+    ...(selectedProject?.owner_id === currentUser?.id
+      ? [{ key: "analytics" as const, label: "Analíticas" }]
+      : []),
+  ];
+
   return (
-    <div className="min-h-screen p-6 lg:p-8 bg-[var(--color-bg-primary)] text-[var(--color-text-primary)] animate-fadeIn">
+    <div className="animate-fade-in">
       {error && (
         <div className="mb-6 p-4 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 flex items-center justify-between">
           <p className="text-sm font-medium">{error}</p>
@@ -451,242 +477,208 @@ export default function ProjectsPage() {
       )}
 
       {!selectedProject ? (
-        // --- PROJECTS DASHBOARD LIST ---
-        <div>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-            <div>
-              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">
-                Desarrollo de Proyectos
-              </h1>
-              <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-                Colabora con metodologías ágiles en tableros interactivos e impulsa a tu equipo.
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setShowJoinModal(true)}
-                className="btn-secondary cursor-pointer"
-              >
-                <KeyIcon />
-                Unirse con Código
-              </button>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="btn-primary cursor-pointer"
-              >
-                <PlusIcon />
-                Crear Proyecto
-              </button>
-            </div>
-          </div>
+        <div className="animate-fade-in">
+          <PageHeader
+            eyebrow="TRABAJO"
+            title="Proyectos"
+            description="Convierte objetivos grandes en sistemas de trabajo claros, comparte el avance con tu equipo y mantén el contexto en un solo lugar."
+            action={
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button type="button" onClick={() => setShowJoinModal(true)} className="btn-secondary">
+                  <KeyIcon />
+                  Unirse con código
+                </button>
+                <button type="button" onClick={() => setShowCreateModal(true)} className="btn-primary">
+                  <PlusIcon />
+                  Nuevo proyecto
+                </button>
+              </div>
+            }
+          />
 
           {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-[var(--color-accent-primary)]"></div>
-            </div>
-          ) : projects.length === 0 ? (
-            <div className="card-static p-12 text-center max-w-xl mx-auto mt-8">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 flex items-center justify-center mx-auto mb-4 text-[var(--color-accent-primary)]">
-                <BriefcaseIcon />
-              </div>
-              <h3 className="text-xl font-bold mb-2">No tienes ningún proyecto activo</h3>
-              <p className="text-sm text-[var(--color-text-secondary)] mb-6">
-                Crea un proyecto seleccionando tu metodología preferida (Kanban, Scrum, Waterfall) e invita a otros miembros.
-              </p>
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={() => setShowJoinModal(true)}
-                  className="btn-secondary cursor-pointer"
-                >
-                  Unirse a uno
-                </button>
-                <button
-                  onClick={() => setShowCreateModal(true)}
-                  className="btn-primary cursor-pointer"
-                >
-                  Crear Proyecto
-                </button>
+            <div className="fryd-panel min-h-[22rem] flex items-center justify-center">
+              <div className="flex flex-col items-center gap-3 text-[var(--color-text-muted)]">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-white/10 border-t-[var(--color-accent-primary)]" />
+                <span className="text-sm">Cargando tu espacio de trabajo...</span>
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {projects.map((proj) => (
-                <div
-                  key={proj.id}
-                  onClick={() => handleSelectProject(proj)}
-                  className="card cursor-pointer group flex flex-col justify-between h-52"
-                >
-                  <div>
-                    <div className="flex items-start justify-between gap-3 mb-2">
-                      <h3 className="text-lg font-bold text-[var(--color-text-primary)] group-hover:text-[var(--color-accent-primary)] transition-colors line-clamp-1">
-                        {proj.name}
-                      </h3>
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-white/[0.04] text-[var(--color-text-secondary)] border border-[var(--color-border-default)]">
-                        {proj.methodology}
-                      </span>
-                    </div>
-                    <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 mb-4">
-                      {proj.description || "Sin descripción proporcionada."}
-                    </p>
+            <>
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-x-3.5 gap-y-6 mb-10">
+                <StatTile label="Proyectos activos" value={projects.length} detail="Espacios de trabajo" tone="brand" icon={<BriefcaseIcon />} />
+                <StatTile label="Progreso promedio" value={`${averageProjectProgress}%`} detail="Avance entre proyectos" tone="success" icon={<span>↗</span>} />
+                <StatTile label="Colaboradores" value={totalProjectMembers} detail="Miembros en tus proyectos" tone="muted" icon={<span>◎</span>} />
+                <StatTile label="Metodologías" value={methodologyCount} detail="Formas de trabajo activas" tone="warning" icon={<span>◇</span>} />
+              </div>
+
+              {projects.length === 0 ? (
+                <div className="fryd-panel py-14 px-6 text-center max-w-2xl mx-auto">
+                  <div className="w-14 h-14 rounded-2xl brand-gradient-soft border border-[var(--color-border-accent)] flex items-center justify-center mx-auto mb-5 text-[#8b93ff]">
+                    <BriefcaseIcon />
                   </div>
-                  <div>
-                    {/* Progress Bar */}
-                    <div className="mb-3">
-                      <div className="flex justify-between text-[10px] mb-1 font-medium text-[var(--color-text-muted)]">
-                        <span>Progreso Tareas</span>
-                        <span className="text-[var(--color-text-primary)]">{proj.task_progress}%</span>
-                      </div>
-                      <div className="w-full h-1.5 rounded-full bg-white/[0.05] overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
-                          style={{ width: `${proj.task_progress}%` }}
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-3 border-t border-[var(--color-border-default)] text-xs text-[var(--color-text-muted)]">
-                      <span className="flex items-center gap-1.5">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-                        </svg>
-                        {proj.member_count} {proj.member_count === 1 ? "miembro" : "miembros"}
-                      </span>
-                      <span className="text-[var(--color-accent-primary)] group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 font-semibold">
-                        Abrir Tablero →
-                      </span>
-                    </div>
+                  <p className="fryd-section-label mb-2">TU PRIMER ESPACIO</p>
+                  <h2 className="text-xl font-semibold tracking-[-0.02em]">Todavía no tienes proyectos</h2>
+                  <p className="text-sm text-[var(--color-text-secondary)] mt-2 max-w-lg mx-auto">
+                    Crea un proyecto para organizar trabajo por metodología o únete a uno existente con un código de invitación.
+                  </p>
+                  <div className="flex flex-wrap justify-center gap-2.5 mt-6">
+                    <button type="button" onClick={() => setShowJoinModal(true)} className="btn-secondary">Unirme a uno</button>
+                    <button type="button" onClick={() => setShowCreateModal(true)} className="btn-primary"><PlusIcon /> Crear proyecto</button>
                   </div>
                 </div>
-              ))}
-            </div>
+              ) : (
+                <section>
+                  <div className="flex items-end justify-between gap-4 mb-4">
+                    <div>
+                      <p className="fryd-section-label mb-1.5">TU PORTAFOLIO</p>
+                      <h2 className="text-lg font-semibold tracking-[-0.02em]">Espacios de trabajo</h2>
+                    </div>
+                    <span className="text-xs text-[var(--color-text-muted)]">{projects.length} {projects.length === 1 ? "proyecto" : "proyectos"}</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-x-4 gap-y-7">
+                    {projects.map((proj, index) => {
+                      const progress = Math.max(0, Math.min(100, Number(proj.task_progress || 0)));
+                      const method = String(proj.methodology || "kanban").toUpperCase();
+                      return (
+                        <button
+                          type="button"
+                          key={proj.id}
+                          onClick={() => handleSelectProject(proj)}
+                          className={`fryd-project-card text-left animate-fade-in delay-${Math.min(index + 1, 6)}`}
+                        >
+                          <div className="flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3.5 min-w-0">
+                              <div className="fryd-project-emblem" aria-hidden="true">
+                                <span>{String(proj.name || "P").trim().charAt(0).toUpperCase()}</span>
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-base font-semibold text-[var(--color-text-primary)] truncate">{proj.name}</h3>
+                                  <span className="badge badge-purple text-[10px]">{method}</span>
+                                </div>
+                                <p className="mt-1.5 text-sm text-[var(--color-text-secondary)] line-clamp-2 min-h-[2.6rem]">
+                                  {proj.description || "Sin descripción. Abre el proyecto para organizar sus tareas y próximos pasos."}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="fryd-project-arrow" aria-hidden="true">→</span>
+                          </div>
+
+                          <div className="mt-6">
+                            <div className="flex items-center justify-between text-xs mb-2">
+                              <span className="text-[var(--color-text-muted)]">Progreso</span>
+                              <span className="font-semibold text-[var(--color-text-primary)]">{progress}%</span>
+                            </div>
+                            <div className="brand-progress-track h-2 rounded-full overflow-hidden">
+                              <div className="brand-progress-fill h-full rounded-full transition-all duration-500" style={{ width: `${progress}%` }} />
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between gap-3 mt-5 pt-4 border-t border-[var(--color-border-subtle)]">
+                            <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-text-muted)]">
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path strokeLinecap="round" strokeLinejoin="round" d="M17 20h5v-2a4 4 0 00-4-4h-1M9 20H2v-2a4 4 0 014-4h3m4 6v-2a4 4 0 00-4-4H6m7 6h4v-2a4 4 0 00-4-4h-2m2-5a4 4 0 110-8 4 4 0 010 8z" /></svg>
+                              {proj.member_count || 0} {Number(proj.member_count || 0) === 1 ? "miembro" : "miembros"}
+                            </span>
+                            <span className="text-xs font-semibold text-[#7f88ff]">Abrir workspace</span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </>
           )}
         </div>
       ) : (
         // --- DETAILED SELECTED PROJECT VIEW ---
         <div>
-          {/* Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-[var(--color-border-default)]">
-            <div className="flex items-start gap-4">
-              <button
-                onClick={() => {
-                  setSelectedProject(null);
-                  fetchProjects();
-                }}
-                className="btn-secondary p-2.5 cursor-pointer"
-              >
-                <ArrowLeftIcon />
-              </button>
-              <div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h1 className="text-2xl font-extrabold text-[var(--color-text-primary)]">
-                    {selectedProject.name}
-                  </h1>
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase">
-                    {selectedProject.methodology}
-                  </span>
-                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--color-surface-input)] border border-[var(--color-border-default)] text-[var(--color-text-secondary)]">
-                    <span>Invitación: <code className="text-emerald-400 font-mono select-all">{selectedProject.invite_code}</code></span>
-                    <button
-                      onClick={() => copyToClipboard(selectedProject.invite_code)}
-                      className="text-[var(--color-text-muted)] hover:text-white transition-colors cursor-pointer"
-                      title="Copiar código"
-                    >
-                      <ClipboardIcon />
-                    </button>
-                    {copiedCode && <span className="text-[10px] text-emerald-400 ml-1">¡Copiado!</span>}
+          <div className="fryd-project-hero mb-6">
+            <div className="fryd-project-hero-accent" aria-hidden="true" />
+            <div className="relative z-[1] p-5 sm:p-6 lg:p-7">
+              <div className="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-5">
+                <div className="flex items-start gap-3.5 min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProject(null);
+                      fetchProjects();
+                    }}
+                    className="btn-secondary p-2.5 flex-shrink-0"
+                    aria-label="Volver a proyectos"
+                  >
+                    <ArrowLeftIcon />
+                  </button>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <p className="fryd-section-label w-full mb-0.5">WORKSPACE DEL PROYECTO</p>
+                      <h1 className="text-2xl sm:text-3xl font-bold tracking-[-0.035em] text-[var(--color-text-primary)]">
+                        {selectedProject.name}
+                      </h1>
+                      <span className="badge badge-purple text-[10px] uppercase">{selectedProject.methodology}</span>
+                    </div>
+                    <p className="text-sm text-[var(--color-text-secondary)] mt-2 max-w-3xl">
+                      {selectedProject.description || "Sin descripción. Usa este workspace para coordinar tareas, equipo, actividad y evolución del proyecto."}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-4 text-xs text-[var(--color-text-muted)]">
+                      <span className="inline-flex items-center gap-1.5">
+                        <span className="status-dot status-dot-active" />
+                        Proyecto activo
+                      </span>
+                      <span>{projectMembers.length} {projectMembers.length === 1 ? "miembro" : "miembros"}</span>
+                      <span>{projectTasksList.length} {projectTasksList.length === 1 ? "tarea" : "tareas"}</span>
+                      <span className="inline-flex items-center gap-2 rounded-lg border border-[var(--color-border-subtle)] bg-black/10 px-2.5 py-1.5">
+                        Código <code className="font-mono text-[#8b93ff] select-all">{selectedProject.invite_code}</code>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(selectedProject.invite_code)}
+                          className="text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                          title="Copiar código"
+                        >
+                          <ClipboardIcon />
+                        </button>
+                        {copiedCode && <span className="text-[10px] text-[var(--color-accent-success)]">Copiado</span>}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                <p className="text-sm text-[var(--color-text-secondary)] mt-1.5">
-                  {selectedProject.description || "Sin descripción."}
-                </p>
-              </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => handleOpenAddTask(getColumnsList()[0] || "Por hacer")}
-                className="btn-primary cursor-pointer"
-              >
-                <PlusIcon />
-                Nueva Tarea
-              </button>
+                <div className="flex flex-col sm:flex-row xl:flex-col 2xl:flex-row gap-3 xl:items-end">
+                  <div className="min-w-[12rem]">
+                    <div className="flex items-center justify-between text-xs mb-2">
+                      <span className="text-[var(--color-text-muted)]">Avance general</span>
+                      <span className="font-semibold">{selectedProjectProgress}%</span>
+                    </div>
+                    <div className="brand-progress-track h-2 rounded-full overflow-hidden">
+                      <div className="brand-progress-fill h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, selectedProjectProgress))}%` }} />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenAddTask(getColumnsList()[0] || "Por hacer")}
+                    className="btn-primary whitespace-nowrap"
+                  >
+                    <PlusIcon />
+                    Nueva tarea
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-1">
-            <button
-              onClick={() => setActiveTab("overview")}
-              className={`
-                flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
-                transition-all duration-200 cursor-pointer
-                ${
-                  activeTab === "overview"
-                    ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] shadow-md"
-                    : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)] hover:border-[var(--color-border-accent)] hover:text-[var(--color-text-primary)]"
-                }
-              `}
-            >
-              📊 Resumen
-            </button>
-            <button
-              onClick={() => setActiveTab("board")}
-              className={`
-                flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
-                transition-all duration-200 cursor-pointer
-                ${
-                  activeTab === "board"
-                    ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] shadow-md"
-                    : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)] hover:border-[var(--color-border-accent)] hover:text-[var(--color-text-primary)]"
-                }
-              `}
-            >
-              📋 Tablero Kanban
-            </button>
-            <button
-              onClick={() => setActiveTab("feed")}
-              className={`
-                flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
-                transition-all duration-200 cursor-pointer
-                ${
-                  activeTab === "feed"
-                    ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] shadow-md"
-                    : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)] hover:border-[var(--color-border-accent)] hover:text-[var(--color-text-primary)]"
-                }
-              `}
-            >
-              💬 Feed del Proyecto
-            </button>
-            <button
-              onClick={() => setActiveTab("leaderboard")}
-              className={`
-                flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
-                transition-all duration-200 cursor-pointer
-                ${
-                  activeTab === "leaderboard"
-                    ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] shadow-md"
-                    : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)] hover:border-[var(--color-border-accent)] hover:text-[var(--color-text-primary)]"
-                }
-              `}
-            >
-              🏆 Rankings y XP
-            </button>
-            {selectedProject.owner_id === currentUser?.id && (
-              <button
-                onClick={() => setActiveTab("analytics")}
-                className={`
-                  flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-sm font-medium whitespace-nowrap
-                  transition-all duration-200 cursor-pointer
-                  ${
-                    activeTab === "analytics"
-                      ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] shadow-md"
-                      : "bg-[var(--color-surface-card)] text-[var(--color-text-secondary)] border border-[var(--color-border-default)] hover:border-[var(--color-border-accent)] hover:text-[var(--color-text-primary)]"
-                  }
-                `}
-              >
-                📊 Analíticas Avanzadas
-              </button>
-            )}
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <SegmentedTabs<ProjectTabKey> tabs={projectTabs} value={activeTab} onChange={setActiveTab} />
+            <span className="hidden lg:block text-xs text-[var(--color-text-muted)]">
+              {activeTab === "overview" && "Pulso general del proyecto"}
+              {activeTab === "board" && "Flujo de trabajo y entregables"}
+              {activeTab === "feed" && "Contexto y coordinación del equipo"}
+              {activeTab === "leaderboard" && "Contribución y experiencia"}
+              {activeTab === "analytics" && "Rendimiento y señales del proyecto"}
+            </span>
           </div>
 
           {/* Tab Content */}
@@ -698,48 +690,56 @@ export default function ProjectsPage() {
             <div>
               {/* --- OVERVIEW TAB --- */}
               {activeTab === "overview" && selectedProject && (
-                <div className="space-y-6 animate-fadeIn">
+                <div className="space-y-9 animate-fade-in">
                   {/* KPI Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="card-static p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-[var(--color-text-muted)] font-medium">Tareas Totales</p>
-                        <p className="text-2xl font-bold mt-1 text-[var(--color-text-primary)]">{projectTasksList.length}</p>
-                      </div>
-                      <span className="text-2xl">📋</span>
+                  <div className="grid grid-cols-2 xl:grid-cols-4 gap-x-3.5 gap-y-6">
+                    <StatTile
+                      label="Tareas totales"
+                      value={projectTasksList.length}
+                      detail={`${projectTasksList.length - completedProjectTasks} pendientes`}
+                      tone="brand"
+                      icon={<span>▦</span>}
+                    />
+                    <StatTile
+                      label="Completadas"
+                      value={completedProjectTasks}
+                      detail={`${selectedProjectProgress}% del trabajo`}
+                      tone="success"
+                      icon={<span>✓</span>}
+                    />
+                    <StatTile
+                      label="Story points"
+                      value={projectTasksList.reduce((acc, task) => acc + (task.story_points || 0), 0)}
+                      detail="Carga estimada"
+                      tone="warning"
+                      icon={<span>◇</span>}
+                    />
+                    <StatTile
+                      label="Puntos completados"
+                      value={projectTasksList.filter((task) => task.completed).reduce((acc, task) => acc + (task.story_points || 0), 0)}
+                      detail="Valor entregado"
+                      tone="muted"
+                      icon={<span>↗</span>}
+                    />
+                  </div>
+
+                  <div className="fryd-project-pulse">
+                    <div>
+                      <p className="fryd-section-label mb-1.5">PULSO DEL PROYECTO</p>
+                      <h2 className="text-lg font-semibold tracking-[-0.02em]">{selectedProjectProgress < 35 ? "Construyendo momentum" : selectedProjectProgress < 75 ? "El proyecto está avanzando" : "Entrando en fase de cierre"}</h2>
+                      <p className="text-sm text-[var(--color-text-secondary)] mt-1">
+                        {completedProjectTasks} de {projectTasksList.length || 0} tareas completadas · {projectMembers.length} {projectMembers.length === 1 ? "persona colaborando" : "personas colaborando"}.
+                      </p>
                     </div>
-                    <div className="card-static p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-[var(--color-text-muted)] font-medium">Completadas</p>
-                        <p className="text-2xl font-bold mt-1 text-emerald-400">
-                          {projectTasksList.filter(t => t.completed).length}
-                        </p>
-                      </div>
-                      <span className="text-2xl">✅</span>
-                    </div>
-                    <div className="card-static p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-[var(--color-text-muted)] font-medium">Story Points Totales</p>
-                        <p className="text-2xl font-bold mt-1 text-indigo-400">
-                          {projectTasksList.reduce((acc, t) => acc + (t.story_points || 0), 0)}
-                        </p>
-                      </div>
-                      <span className="text-2xl">⚡</span>
-                    </div>
-                    <div className="card-static p-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-[var(--color-text-muted)] font-medium">Puntos Completados</p>
-                        <p className="text-2xl font-bold mt-1 text-violet-400">
-                          {projectTasksList.filter(t => t.completed).reduce((acc, t) => acc + (t.story_points || 0), 0)}
-                        </p>
-                      </div>
-                      <span className="text-2xl">🔥</span>
+                    <div className="w-full sm:w-56">
+                      <div className="flex justify-between text-xs text-[var(--color-text-muted)] mb-2"><span>Avance</span><span className="text-[var(--color-text-primary)] font-semibold">{selectedProjectProgress}%</span></div>
+                      <div className="brand-progress-track h-2.5 rounded-full overflow-hidden"><div className="brand-progress-fill h-full rounded-full" style={{ width: `${Math.max(0, Math.min(100, selectedProjectProgress))}%` }} /></div>
                     </div>
                   </div>
 
                   {/* Adaptive Content depending on methodology */}
                   {selectedProject.methodology === "scrum" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-9">
                       {/* Sprint Burndown chart */}
                       <div className="lg:col-span-2 card-static p-5">
                         <h3 className="font-bold text-sm text-[var(--color-text-secondary)] uppercase tracking-wider mb-4">Burndown del Sprint (Puntos)</h3>
@@ -832,7 +832,7 @@ export default function ProjectsPage() {
                   )}
 
                   {selectedProject.methodology === "waterfall" && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-9">
                       {/* Gantt phases checklist */}
                       <div className="lg:col-span-2 card-static p-5">
                         <h3 className="font-bold text-sm text-[var(--color-text-secondary)] uppercase tracking-wider mb-4">Cronograma de Fases (Fase Activa: {activePhase})</h3>
@@ -970,7 +970,7 @@ export default function ProjectsPage() {
                   )}
 
                   {(selectedProject.methodology === "kanban" || selectedProject.methodology === "lean") && (
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-9">
                       {/* Flow diagnostics */}
                       <div className="lg:col-span-2 card-static p-5">
                         <h3 className="font-bold text-sm text-[var(--color-text-secondary)] uppercase tracking-wider mb-4">Diagnóstico de Flujo Kanban</h3>
@@ -1074,7 +1074,7 @@ export default function ProjectsPage() {
 
               {/* --- FEED TAB --- */}
               {activeTab === "feed" && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fadeIn">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-fade-in">
                   {/* Post Form */}
                   <div className="lg:col-span-1">
                     <div className="card-static p-5 sticky top-6 bg-gradient-to-b from-[var(--color-surface-card)] to-white/[0.01] border border-[var(--color-border-default)] shadow-xl rounded-2xl">
@@ -1229,7 +1229,7 @@ export default function ProjectsPage() {
 
               {/* --- ANALYTICS TAB --- */}
               {activeTab === "analytics" && selectedProject && (
-                <div className="space-y-8 animate-fadeIn print:space-y-4">
+                <div className="space-y-8 animate-fade-in print:space-y-4">
                   {/* Style for print optimization */}
                   <style>{`
                     @media print {
@@ -1375,7 +1375,7 @@ export default function ProjectsPage() {
                       </div>
 
                       {/* Productivity & Contributions Charts Grid */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-9">
                         {/* Weekly Productivity Chart */}
                         <div className="print-card card-static p-5 flex flex-col justify-between min-h-[350px]">
                           <div>
@@ -1426,7 +1426,7 @@ export default function ProjectsPage() {
                       </div>
 
                       {/* AI Coach Card & Opportunities Row */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-6 gap-y-9">
                         {/* AI Coach Container (ColSpan 2) */}
                         <div className="lg:col-span-2 print-card card-static p-5 flex flex-col justify-between">
                           <div>
@@ -1509,368 +1509,223 @@ export default function ProjectsPage() {
       )}
 
       {/* --- CREATE PROJECT MODAL --- */}
-      {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content card-static w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Crear un Nuevo Proyecto</h3>
-              <button onClick={() => setShowCreateModal(false)} className="btn-ghost p-1 cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <form onSubmit={handleCreateProject} className="flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Nombre del Proyecto
-                </label>
-                <input
-                  type="text"
-                  value={projectName}
-                  onChange={(e) => setProjectName(e.target.value)}
-                  placeholder="Ej. Rediseño Web, Campaña Q3..."
-                  className="fryd-input"
-                  required
-                />
-              </div>
+      <Modal
+        open={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Nuevo proyecto"
+        description="Define el espacio de trabajo y la metodología que mejor represente cómo quieres avanzar."
+        icon={<BriefcaseIcon />}
+        footer={
+          <>
+            <button type="button" onClick={() => setShowCreateModal(false)} className="btn-secondary">Cancelar</button>
+            <button type="submit" form="create-project-form" className="btn-primary" disabled={loading}>
+              <PlusIcon /> {loading ? "Creando..." : "Crear proyecto"}
+            </button>
+          </>
+        }
+      >
+        <form id="create-project-form" onSubmit={handleCreateProject} className="flex flex-col gap-5">
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Nombre del proyecto</label>
+            <input
+              type="text"
+              value={projectName}
+              onChange={(event) => setProjectName(event.target.value)}
+              placeholder="Ej. Rediseño FRYD"
+              className="fryd-input"
+              required
+            />
+          </div>
 
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Descripción (Opcional)
-                </label>
-                <textarea
-                  value={projectDescription}
-                  onChange={(e) => setProjectDescription(e.target.value)}
-                  placeholder="De qué se trata el proyecto, objetivos, entregables..."
-                  className="fryd-input min-h-[80px] resize-none"
-                  rows={3}
-                />
-              </div>
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Descripción <span className="text-[var(--color-text-muted)] font-normal">· opcional</span></label>
+            <textarea
+              value={projectDescription}
+              onChange={(event) => setProjectDescription(event.target.value)}
+              placeholder="Objetivo, contexto y entregables principales..."
+              className="fryd-input min-h-[96px] resize-none"
+              rows={4}
+            />
+          </div>
 
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Metodología
-                </label>
-                <select
-                  value={methodology}
-                  onChange={(e) => setMethodology(e.target.value)}
-                  className="fryd-input select-styled cursor-pointer"
-                >
-                  <option value="kanban">Kanban (Por hacer, En progreso, QA, Completado)</option>
-                  <option value="scrum">Scrum (Backlog, Por hacer, En progreso, QA, Finalizado)</option>
-                  <option value="waterfall">Waterfall (Requisitos, Diseño, Implementación, Pruebas, Cerrado)</option>
-                  <option value="lean">Lean (Por hacer, En progreso, Completado)</option>
-                  <option value="custom">Personalizada...</option>
-                </select>
-              </div>
-
-              {methodology === "custom" && (
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Columnas Personalizadas (Separadas por comas)
-                  </label>
-                  <input
-                    type="text"
-                    value={customColumns}
-                    onChange={(e) => setCustomColumns(e.target.value)}
-                    placeholder="Ej. Ideación, Diseño, QA, Desplegado"
-                    className="fryd-input"
-                    required
-                  />
-                </div>
-              )}
-
-              <div className="flex gap-2 mt-2">
-                <button type="submit" className="btn-primary flex-1 cursor-pointer">
-                  Crear Proyecto
-                </button>
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-2 block">Metodología</label>
+            <select value={methodology} onChange={(event) => setMethodology(event.target.value)} className="fryd-input select-styled cursor-pointer">
+              <option value="kanban">Kanban · flujo continuo</option>
+              <option value="scrum">Scrum · trabajo por sprint</option>
+              <option value="waterfall">Waterfall · fases secuenciales</option>
+              <option value="lean">Lean · flujo simplificado</option>
+              <option value="custom">Personalizada · define tus columnas</option>
+            </select>
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                ["kanban", "Kanban", "Flexible"],
+                ["scrum", "Scrum", "Sprints"],
+                ["waterfall", "Waterfall", "Fases"],
+                ["lean", "Lean", "Ligero"],
+              ].map(([key, label, caption]) => (
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
-                  className="btn-secondary cursor-pointer"
+                  key={key}
+                  onClick={() => setMethodology(key)}
+                  className={`fryd-method-tile ${methodology === key ? "is-active" : ""}`}
                 >
-                  Cancelar
+                  <span className="font-semibold">{label}</span>
+                  <span>{caption}</span>
                 </button>
-              </div>
-            </form>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+
+          {methodology === "custom" && (
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Columnas personalizadas</label>
+              <input
+                type="text"
+                value={customColumns}
+                onChange={(event) => setCustomColumns(event.target.value)}
+                placeholder="Ideación, Diseño, QA, Desplegado"
+                className="fryd-input"
+                required
+              />
+              <p className="mt-1.5 text-xs text-[var(--color-text-muted)]">Separa cada etapa con una coma.</p>
+            </div>
+          )}
+        </form>
+      </Modal>
 
       {/* --- JOIN PROJECT MODAL --- */}
-      {showJoinModal && (
-        <div className="modal-overlay" onClick={() => setShowJoinModal(false)}>
-          <div className="modal-content card-static w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Unirse a un Proyecto</h3>
-              <button onClick={() => setShowJoinModal(false)} className="btn-ghost p-1 cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <form onSubmit={handleJoinProject} className="flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Código de Invitación
-                </label>
-                <input
-                  type="text"
-                  value={inviteCode}
-                  onChange={(e) => setInviteCode(e.target.value)}
-                  placeholder="Ej. PROJ-ABCDEF12"
-                  className="fryd-input font-mono uppercase"
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2 mt-2">
-                <button type="submit" className="btn-primary flex-1 cursor-pointer">
-                  Unirse
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowJoinModal(false)}
-                  className="btn-secondary cursor-pointer"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showJoinModal}
+        onClose={() => setShowJoinModal(false)}
+        title="Unirte a un proyecto"
+        description="Introduce el código que te compartió el propietario para añadir el workspace a FRYD."
+        icon={<KeyIcon />}
+        footer={
+          <>
+            <button type="button" onClick={() => setShowJoinModal(false)} className="btn-secondary">Cancelar</button>
+            <button type="submit" form="join-project-form" className="btn-primary" disabled={loading}>{loading ? "Uniéndome..." : "Unirme al proyecto"}</button>
+          </>
+        }
+      >
+        <form id="join-project-form" onSubmit={handleJoinProject} className="space-y-4">
+          <div className="fryd-panel-subtle p-4">
+            <p className="fryd-section-label mb-1">CÓDIGO DE INVITACIÓN</p>
+            <p className="text-xs text-[var(--color-text-muted)]">El código identifica el proyecto y permite que FRYD vincule tu usuario como miembro.</p>
           </div>
-        </div>
-      )}
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Código</label>
+            <input
+              type="text"
+              value={inviteCode}
+              onChange={(event) => setInviteCode(event.target.value)}
+              placeholder="PROJ-ABCDEF12"
+              className="fryd-input font-mono uppercase tracking-[0.08em]"
+              required
+            />
+          </div>
+        </form>
+      </Modal>
 
       {/* --- ADD TASK MODAL --- */}
-      {showAddTaskModal && (
-        <div className="modal-overlay" onClick={() => setShowAddTaskModal(false)}>
-          <div className="modal-content card-static w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Crear Tarea</h3>
-              <button onClick={() => setShowAddTaskModal(false)} className="btn-ghost p-1 cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <form onSubmit={handleCreateTaskSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Título de la Tarea
-                </label>
-                <input
-                  type="text"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  placeholder="Ej. Diseñar wireframe de landing"
-                  className="fryd-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Descripción
-                </label>
-                <textarea
-                  value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
-                  placeholder="Detalles sobre los requerimientos, criterios de aceptación..."
-                  className="fryd-input min-h-[80px] resize-none"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Story Points
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="40"
-                    value={taskStoryPoints}
-                    onChange={(e) => setTaskStoryPoints(parseInt(e.target.value, 10))}
-                    className="fryd-input"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Recompensa (XP)
-                  </label>
-                  <input
-                    type="number"
-                    min="5"
-                    max="200"
-                    value={taskXpReward}
-                    onChange={(e) => setTaskXpReward(parseInt(e.target.value, 10))}
-                    className="fryd-input"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Asignar a
-                  </label>
-                  <select
-                    value={taskAssignedTo}
-                    onChange={(e) => setTaskAssignedTo(e.target.value)}
-                    className="fryd-input select-styled cursor-pointer"
-                  >
-                    <option value="">Sin asignar</option>
-                    {projectMembers.map((m) => (
-                      <option key={m.user_id} value={m.user_id.toString()}>
-                        {m.username}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Fecha Límite
-                  </label>
-                  <input
-                    type="date"
-                    value={taskDueDate}
-                    onChange={(e) => setTaskDueDate(e.target.value)}
-                    className="fryd-input"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-2">
-                <button type="submit" className="btn-primary flex-1 cursor-pointer">
-                  Crear Tarea
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAddTaskModal(false)}
-                  className="btn-secondary cursor-pointer"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showAddTaskModal}
+        onClose={() => setShowAddTaskModal(false)}
+        title="Nueva tarea de proyecto"
+        description={`Añádela a ${taskColumn || "la primera etapa"} y define el esfuerzo, responsable y fecha si aplica.`}
+        icon={<PlusIcon />}
+        footer={
+          <>
+            <button type="button" onClick={() => setShowAddTaskModal(false)} className="btn-secondary">Cancelar</button>
+            <button type="submit" form="project-task-form" className="btn-primary" disabled={loading}>{loading ? "Creando..." : "Crear tarea"}</button>
+          </>
+        }
+      >
+        <form id="project-task-form" onSubmit={handleCreateTaskSubmit} className="flex flex-col gap-5">
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Título</label>
+            <input type="text" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} placeholder="Ej. Diseñar wireframe de landing" className="fryd-input" required />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Descripción</label>
+            <textarea value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} placeholder="Contexto, requisitos o criterios de aceptación..." className="fryd-input min-h-[96px] resize-none" rows={4} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Story points</label>
+              <input type="number" min="1" max="40" value={taskStoryPoints} onChange={(event) => setTaskStoryPoints(parseInt(event.target.value, 10))} className="fryd-input" required />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Recompensa XP</label>
+              <input type="number" min="5" max="200" value={taskXpReward} onChange={(event) => setTaskXpReward(parseInt(event.target.value, 10))} className="fryd-input" required />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Responsable</label>
+              <select value={taskAssignedTo} onChange={(event) => setTaskAssignedTo(event.target.value)} className="fryd-input select-styled cursor-pointer">
+                <option value="">Sin asignar</option>
+                {projectMembers.map((member) => <option key={member.user_id} value={member.user_id.toString()}>{member.username}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Fecha límite</label>
+              <input type="date" value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)} className="fryd-input" />
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* --- EDIT TASK MODAL --- */}
-      {showEditTaskModal && (
-        <div className="modal-overlay" onClick={() => setShowEditTaskModal(false)}>
-          <div className="modal-content card-static w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-[var(--color-text-primary)]">Editar Tarea</h3>
-              <button onClick={() => setShowEditTaskModal(false)} className="btn-ghost p-1 cursor-pointer">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </div>
-            <form onSubmit={handleEditTaskSubmit} className="flex flex-col gap-4">
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Título de la Tarea
-                </label>
-                <input
-                  type="text"
-                  value={taskTitle}
-                  onChange={(e) => setTaskTitle(e.target.value)}
-                  className="fryd-input"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                  Descripción
-                </label>
-                <textarea
-                  value={taskDescription}
-                  onChange={(e) => setTaskDescription(e.target.value)}
-                  className="fryd-input min-h-[80px] resize-none"
-                  rows={3}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Story Points
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="40"
-                    value={taskStoryPoints}
-                    onChange={(e) => setTaskStoryPoints(parseInt(e.target.value, 10))}
-                    className="fryd-input"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Columna Actual
-                  </label>
-                  <select
-                    value={taskColumn}
-                    onChange={(e) => setTaskColumn(e.target.value)}
-                    className="fryd-input select-styled cursor-pointer"
-                  >
-                    {getColumnsList().map((c: string) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Asignar a
-                  </label>
-                  <select
-                    value={taskAssignedTo}
-                    onChange={(e) => setTaskAssignedTo(e.target.value)}
-                    className="fryd-input select-styled cursor-pointer"
-                  >
-                    <option value="">Sin asignar</option>
-                    {projectMembers.map((m) => (
-                      <option key={m.user_id} value={m.user_id.toString()}>
-                        {m.username}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">
-                    Fecha Límite
-                  </label>
-                  <input
-                    type="date"
-                    value={taskDueDate}
-                    onChange={(e) => setTaskDueDate(e.target.value)}
-                    className="fryd-input"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 mt-2">
-                <button type="submit" className="btn-primary flex-1 cursor-pointer">
-                  Guardar Cambios
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowEditTaskModal(false)}
-                  className="btn-secondary cursor-pointer"
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
+      <Modal
+        open={showEditTaskModal}
+        onClose={() => setShowEditTaskModal(false)}
+        title="Editar tarea"
+        description="Actualiza el contexto, esfuerzo, etapa o responsable sin perder el historial del proyecto."
+        icon={<ClipboardIcon />}
+        footer={
+          <>
+            <button type="button" onClick={() => setShowEditTaskModal(false)} className="btn-secondary">Cancelar</button>
+            <button type="submit" form="edit-project-task-form" className="btn-primary" disabled={loading}>{loading ? "Guardando..." : "Guardar cambios"}</button>
+          </>
+        }
+      >
+        <form id="edit-project-task-form" onSubmit={handleEditTaskSubmit} className="flex flex-col gap-5">
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Título</label>
+            <input type="text" value={taskTitle} onChange={(event) => setTaskTitle(event.target.value)} className="fryd-input" required />
           </div>
-        </div>
-      )}
+          <div>
+            <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Descripción</label>
+            <textarea value={taskDescription} onChange={(event) => setTaskDescription(event.target.value)} className="fryd-input min-h-[96px] resize-none" rows={4} />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Story points</label>
+              <input type="number" min="1" max="40" value={taskStoryPoints} onChange={(event) => setTaskStoryPoints(parseInt(event.target.value, 10))} className="fryd-input" required />
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Etapa</label>
+              <select value={taskColumn} onChange={(event) => setTaskColumn(event.target.value)} className="fryd-input select-styled cursor-pointer">
+                {getColumnsList().map((column: string) => <option key={column} value={column}>{column}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Responsable</label>
+              <select value={taskAssignedTo} onChange={(event) => setTaskAssignedTo(event.target.value)} className="fryd-input select-styled cursor-pointer">
+                <option value="">Sin asignar</option>
+                {projectMembers.map((member) => <option key={member.user_id} value={member.user_id.toString()}>{member.username}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-[var(--color-text-secondary)] mb-1.5 block">Fecha límite</label>
+              <input type="date" value={taskDueDate} onChange={(event) => setTaskDueDate(event.target.value)} className="fryd-input" />
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

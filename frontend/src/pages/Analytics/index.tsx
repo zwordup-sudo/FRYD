@@ -1,22 +1,20 @@
-import { useEffect, useState } from "react";
-import { getAnalyticsSummary } from "../../services/api";
+import { useEffect, useMemo, useState } from "react";
 import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  AreaChart,
   Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend,
-  Cell,
 } from "recharts";
-
-// ── Types ──────────────────────────────────────────────────────────
+import PageHeader from "../../components/ui/PageHeader";
+import StatTile from "../../components/ui/StatTile";
+import { getAnalyticsSummary } from "../../services/api";
 
 type MoodTrendPoint = {
   date: string;
@@ -60,78 +58,111 @@ type AnalyticsData = {
   daily_correlation: CorrelationPoint[];
 };
 
-// ── Mood Config ────────────────────────────────────────────────────
-
 const moodConfig: Record<string, { emoji: string; label: string; color: string }> = {
   happy: { emoji: "😊", label: "Feliz", color: "#34d399" },
   sad: { emoji: "😢", label: "Triste", color: "#60a5fa" },
   annoyed: { emoji: "😤", label: "Molesto", color: "#f87171" },
   excited: { emoji: "🤩", label: "Emocionado", color: "#fbbf24" },
-  neutral: { emoji: "😐", label: "Neutral", color: "#9ca3af" },
+  neutral: { emoji: "😐", label: "Neutral", color: "#94a3b8" },
   stressed: { emoji: "😰", label: "Estresado", color: "#c084fc" },
-  calm: { emoji: "😌", label: "Calmado", color: "#2dd4bf" },
+  calm: { emoji: "😌", label: "Calmado", color: "#14b8a6" },
 };
 
-// ── Chart Colors ───────────────────────────────────────────────────
-
-const COLORS = {
-  primary: "#34d399",
-  secondary: "#a78bfa",
-  tertiary: "#f472b6",
+const CHART = {
+  violet: "#6366f1",
+  blue: "#3b82f6",
+  teal: "#14b8a6",
+  success: "#34d399",
   warning: "#fbbf24",
-  info: "#60a5fa",
-  grid: "rgba(255, 255, 255, 0.04)",
-  axis: "rgba(255, 255, 255, 0.25)",
-  tooltipBg: "rgba(15, 15, 20, 0.95)",
+  danger: "#f87171",
+  grid: "rgba(148, 163, 184, 0.09)",
+  axis: "#64748b",
 };
 
-// ── Custom Tooltip ─────────────────────────────────────────────────
+function clamp(value: number, min = 0, max = 100) {
+  return Math.min(max, Math.max(min, value));
+}
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+function formatShortDate(date: string) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString("es-MX", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function getConsistencyTone(rate: number) {
+  if (rate >= 80) return { color: CHART.success, label: "Muy sólido" };
+  if (rate >= 60) return { color: CHART.teal, label: "Buen ritmo" };
+  if (rate >= 40) return { color: CHART.warning, label: "En construcción" };
+  return { color: CHART.danger, label: "Necesita atención" };
+}
+
+function ChartTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
+
   return (
-    <div className="bg-[rgba(15,15,20,0.95)] border border-[rgba(255,255,255,0.1)] rounded-xl px-3.5 py-2.5 shadow-2xl backdrop-blur-md">
-      <p className="text-[10px] text-[rgba(255,255,255,0.4)] font-semibold uppercase tracking-wider mb-1.5">
-        {label}
-      </p>
-      {payload.map((entry: any, idx: number) => (
-        <div key={idx} className="flex items-center gap-2 text-xs">
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0"
-            style={{ backgroundColor: entry.color }}
-          />
-          <span className="text-[rgba(255,255,255,0.6)]">{entry.name}:</span>
-          <span className="font-semibold text-white">
-            {typeof entry.value === "number" ? entry.value.toFixed(entry.name?.includes("%") ? 1 : 0) : entry.value}
-          </span>
-        </div>
-      ))}
+    <div className="fryd-chart-tooltip">
+      {label && <p className="fryd-chart-tooltip-label">{label}</p>}
+      <div className="space-y-1.5">
+        {payload.map((entry: any, index: number) => (
+          <div key={`${entry.dataKey}-${index}`} className="flex items-center justify-between gap-5 text-xs">
+            <span className="flex items-center gap-2 text-[var(--color-text-secondary)]">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: entry.color || entry.stroke }} />
+              {entry.name}
+            </span>
+            <strong className="font-semibold text-[var(--color-text-primary)]">
+              {entry.value ?? "—"}
+            </strong>
+          </div>
+        ))}
+      </div>
     </div>
   );
-};
+}
 
-// ── Consistency bar color helper ───────────────────────────────────
+function IconCheck() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  );
+}
 
-const getConsistencyColor = (rate: number) => {
-  if (rate >= 80) return "#34d399";
-  if (rate >= 60) return "#fbbf24";
-  if (rate >= 40) return "#fb923c";
-  return "#f87171";
-};
+function IconRepeat() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m17 1 4 4-4 4" />
+      <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+      <path d="m7 23-4-4 4-4" />
+      <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+    </svg>
+  );
+}
 
-// ── Main Component ─────────────────────────────────────────────────
+function IconBolt() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m13 2-9 12h8l-1 8 9-12h-8l1-8Z" />
+    </svg>
+  );
+}
+
+function IconFlame() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M12 22c4.4 0 8-3.1 8-7.4 0-2.7-1.2-4.7-3.5-6.9.1 2.4-1.5 3.7-2.7 4.2.1-3.4-1.9-7-5.5-9.9.1 4.7-4.3 6.3-4.3 11.5C4 18.5 7.6 22 12 22Z" />
+    </svg>
+  );
+}
 
 export default function AnalyticsPage() {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    loadAnalytics();
-  }, []);
-
   const loadAnalytics = async () => {
     setIsLoading(true);
+    setError("");
     try {
       const result = await getAnalyticsSummary();
       setData(result);
@@ -142,18 +173,93 @@ export default function AnalyticsPage() {
     }
   };
 
+  useEffect(() => {
+    loadAnalytics();
+  }, []);
+
+  const analytics = useMemo(() => {
+    if (!data) return null;
+
+    const taskCompletionRate = data.total_tasks
+      ? Math.round((data.completed_tasks / data.total_tasks) * 100)
+      : 0;
+    const avgConsistency = data.habit_consistency.length
+      ? Math.round(
+          data.habit_consistency.reduce((sum, habit) => sum + habit.completion_rate, 0) /
+            data.habit_consistency.length,
+        )
+      : 0;
+    const energyRate = clamp((data.avg_energy / 5) * 100);
+    const momentumScore = Math.round(
+      clamp(taskCompletionRate * 0.45 + avgConsistency * 0.35 + energyRate * 0.2),
+    );
+
+    const totalCreated = data.task_productivity.reduce((sum, week) => sum + week.created, 0);
+    const totalCompleted = data.task_productivity.reduce((sum, week) => sum + week.completed, 0);
+    const weeklyBalance = totalCompleted - totalCreated;
+
+    const sortedHabits = [...data.habit_consistency].sort(
+      (a, b) => b.completion_rate - a.completion_rate,
+    );
+    const strongestHabit = sortedHabits[0] ?? null;
+
+    const recentEnergy = data.mood_trend.slice(-7).map((point) => point.energy_level);
+    const previousEnergy = data.mood_trend.slice(-14, -7).map((point) => point.energy_level);
+    const avg = (values: number[]) =>
+      values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+    const energyDelta = avg(recentEnergy) - avg(previousEnergy);
+
+    let insightTitle = "Estás construyendo una base estable";
+    let insightBody =
+      "Tus datos ya muestran suficiente actividad para empezar a reconocer patrones entre tareas, hábitos y energía.";
+
+    if (momentumScore >= 80) {
+      insightTitle = "Tu ritmo está muy fuerte";
+      insightBody =
+        "Tareas, hábitos y energía están alineados. Conviene proteger este ritmo antes de aumentar la carga de trabajo.";
+    } else if (taskCompletionRate >= 70 && avgConsistency < 55) {
+      insightTitle = "Cumples tareas, pero tus hábitos pueden darte más estabilidad";
+      insightBody =
+        "Tu ejecución es buena. Consolidar uno o dos hábitos clave puede hacer que ese rendimiento sea más sostenible.";
+    } else if (avgConsistency >= 70 && taskCompletionRate < 55) {
+      insightTitle = "Tus hábitos son sólidos; ahora toca convertirlos en avance";
+      insightBody =
+        "Tienes una buena base de constancia. Prueba reducir tareas abiertas y priorizar una meta principal por día.";
+    } else if (data.avg_energy < 2.8) {
+      insightTitle = "La energía podría estar limitando tu avance";
+      insightBody =
+        "Tu promedio reciente es bajo. Considera días con menos carga y observa qué hábitos coinciden con mejores niveles de energía.";
+    }
+
+    return {
+      taskCompletionRate,
+      avgConsistency,
+      momentumScore,
+      totalCreated,
+      totalCompleted,
+      weeklyBalance,
+      strongestHabit,
+      energyDelta,
+      insightTitle,
+      insightBody,
+    };
+  }, [data]);
+
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 animate-fade-in">
-        <div className="w-10 h-10 rounded-full border-4 border-[var(--color-accent-primary-glow)] border-t-[var(--color-accent-primary)] animate-spin" />
-        <p className="text-sm text-[var(--color-text-muted)]">Calculando tus analíticas...</p>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 animate-fade-in">
+        <div className="fryd-brand-spinner" />
+        <div className="text-center">
+          <p className="text-sm font-medium text-[var(--color-text-primary)]">Leyendo tus patrones</p>
+          <p className="mt-1 text-xs text-[var(--color-text-muted)]">FRYD está preparando tu panorama.</p>
+        </div>
       </div>
     );
   }
 
-  if (error || !data) {
+  if (error || !data || !analytics) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 animate-fade-in">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 animate-fade-in">
         <div className="alert alert-error">{error || "No se pudieron cargar los datos"}</div>
         <button onClick={loadAnalytics} className="btn-secondary text-sm">
           Reintentar
@@ -162,214 +268,220 @@ export default function AnalyticsPage() {
     );
   }
 
-  const taskCompletionRate =
-    data.total_tasks > 0 ? Math.round((data.completed_tasks / data.total_tasks) * 100) : 0;
-
-  const avgConsistency =
-    data.habit_consistency.length > 0
-      ? Math.round(
-          data.habit_consistency.reduce((sum, h) => sum + h.completion_rate, 0) /
-            data.habit_consistency.length
-        )
-      : 0;
-
-  // Format mood trend dates for display
-  const moodTrendFormatted = data.mood_trend.map((p) => ({
-    ...p,
-    shortDate: new Date(p.date + "T12:00:00").toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "short",
-    }),
-    moodEmoji: moodConfig[p.mood]?.emoji || "😐",
-    moodLabel: moodConfig[p.mood]?.label || p.mood,
+  const moodTrend = data.mood_trend.map((point) => ({
+    ...point,
+    shortDate: formatShortDate(point.date),
+    moodEmoji: moodConfig[point.mood]?.emoji || "😐",
+    moodLabel: moodConfig[point.mood]?.label || point.mood,
   }));
 
-  // Format correlation dates
-  const correlationFormatted = data.daily_correlation.map((p) => ({
-    ...p,
-    shortDate: new Date(p.date + "T12:00:00").toLocaleDateString("es-MX", {
-      day: "numeric",
-      month: "short",
-    }),
+  const dailyRhythm = data.daily_correlation.map((point) => ({
+    ...point,
+    shortDate: formatShortDate(point.date),
   }));
+
+  const commonMood = moodConfig[data.most_common_mood] || moodConfig.neutral;
+  const momentumCircumference = 2 * Math.PI * 44;
+  const momentumOffset = momentumCircumference * (1 - analytics.momentumScore / 100);
 
   return (
     <div className="animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-[var(--color-text-primary)]">Analíticas</h1>
-          <p className="text-sm text-[var(--color-text-secondary)] mt-1">
-            Visualiza tu progreso, descubre patrones y mejora cada día.
-          </p>
-        </div>
-        <button onClick={loadAnalytics} className="btn-secondary self-start sm:self-auto text-sm">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l5.67-5.67" />
-          </svg>
-          Actualizar
-        </button>
-      </div>
+      <PageHeader
+        eyebrow="PATRONES Y PROGRESO"
+        title="Analíticas"
+        description="Convierte tu actividad diaria en señales claras para decidir qué mantener, qué ajustar y dónde poner tu energía."
+        action={
+          <button onClick={loadAnalytics} className="btn-secondary text-sm">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20 11a8.1 8.1 0 1 1-2.4-5.7L20 7.7" />
+              <path d="M20 3v5h-5" />
+            </svg>
+            Actualizar
+          </button>
+        }
+      />
 
-      {/* ── Row 1: Summary Stats ──────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        {/* Tasks completed */}
-        <div className="card-static animate-slide-in-up" style={{ animationDelay: "0ms" }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl gradient-green flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" />
-                <path d="M9 12l2 2 4-4" />
+      <section className="grid grid-cols-2 gap-x-3 gap-y-6 lg:grid-cols-4 lg:gap-x-4 lg:gap-y-6">
+        <StatTile
+          label="Tareas completadas"
+          value={`${analytics.taskCompletionRate}%`}
+          detail={`${data.completed_tasks} de ${data.total_tasks} tareas`}
+          tone="success"
+          icon={<IconCheck />}
+        />
+        <StatTile
+          label="Consistencia de hábitos"
+          value={`${analytics.avgConsistency}%`}
+          detail={`${data.active_habits} hábitos activos`}
+          tone="brand"
+          icon={<IconRepeat />}
+        />
+        <StatTile
+          label="Energía promedio"
+          value={`${data.avg_energy}/5`}
+          detail={`${commonMood.emoji} ${commonMood.label} es tu ánimo frecuente`}
+          tone="warning"
+          icon={<IconBolt />}
+        />
+        <StatTile
+          label="Racha de diario"
+          value={`${data.current_streak} días`}
+          detail={`${data.total_entries} entradas registradas`}
+          tone="muted"
+          icon={<IconFlame />}
+        />
+      </section>
+
+      <section className="mt-9 grid gap-x-5 gap-y-9 xl:grid-cols-[1.45fr_0.9fr]">
+        <article className="fryd-analytics-hero">
+          <div className="fryd-analytics-hero-accent" />
+          <div className="flex flex-col gap-6 md:flex-row md:items-center">
+            <div className="fryd-momentum-ring" aria-label={`Momentum personal ${analytics.momentumScore} de 100`}>
+              <svg viewBox="0 0 108 108" role="img">
+                <defs>
+                  <linearGradient id="frydMomentumGradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor={CHART.violet} />
+                    <stop offset="55%" stopColor={CHART.blue} />
+                    <stop offset="100%" stopColor={CHART.teal} />
+                  </linearGradient>
+                </defs>
+                <circle cx="54" cy="54" r="44" className="fryd-momentum-track" />
+                <circle
+                  cx="54"
+                  cy="54"
+                  r="44"
+                  className="fryd-momentum-progress"
+                  stroke="url(#frydMomentumGradient)"
+                  strokeDasharray={momentumCircumference}
+                  strokeDashoffset={momentumOffset}
+                />
               </svg>
+              <div className="fryd-momentum-value">
+                <strong>{analytics.momentumScore}</strong>
+                <span>/100</span>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                {taskCompletionRate}%
-              </p>
-              <p className="text-[10px] text-[var(--color-text-muted)]">Tareas completadas</p>
-            </div>
-          </div>
-          <div className="w-full h-1.5 bg-[var(--color-surface-input)] rounded-full overflow-hidden">
-            <div
-              className="h-full gradient-green rounded-full transition-all duration-700"
-              style={{ width: `${taskCompletionRate}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-            {data.completed_tasks} de {data.total_tasks} tareas
-          </p>
-        </div>
 
-        {/* Active habits */}
-        <div className="card-static animate-slide-in-up" style={{ animationDelay: "60ms" }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl gradient-purple flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10" />
-                <path d="M12 8v4l3 3" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                {avgConsistency}%
-              </p>
-              <p className="text-[10px] text-[var(--color-text-muted)]">Consistencia hábitos</p>
-            </div>
-          </div>
-          <div className="w-full h-1.5 bg-[var(--color-surface-input)] rounded-full overflow-hidden">
-            <div
-              className="h-full gradient-purple rounded-full transition-all duration-700"
-              style={{ width: `${avgConsistency}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-            {data.active_habits} hábitos activos
-          </p>
-        </div>
-
-        {/* Average energy */}
-        <div className="card-static animate-slide-in-up" style={{ animationDelay: "120ms" }}>
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl gradient-amber flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2">
-                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                {data.avg_energy}
-                <span className="text-sm text-[var(--color-text-muted)]">/5</span>
-              </p>
-              <p className="text-[10px] text-[var(--color-text-muted)]">Energía promedio</p>
-            </div>
-          </div>
-          <div className="w-full h-1.5 bg-[var(--color-surface-input)] rounded-full overflow-hidden">
-            <div
-              className="h-full gradient-amber rounded-full transition-all duration-700"
-              style={{ width: `${(data.avg_energy / 5) * 100}%` }}
-            />
-          </div>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-            Ánimo frecuente: {moodConfig[data.most_common_mood]?.emoji || "😐"}{" "}
-            {moodConfig[data.most_common_mood]?.label || data.most_common_mood}
-          </p>
-        </div>
-
-        {/* Streak */}
-        <div className="card-static animate-slide-in-up relative overflow-hidden" style={{ animationDelay: "180ms" }}>
-          <div className="absolute -top-6 -right-6 w-20 h-20 bg-[var(--color-accent-warning)] opacity-10 rounded-full blur-2xl" />
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl gradient-pink flex items-center justify-center">
-              <span className="text-lg">🔥</span>
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-[var(--color-text-primary)]">
-                {data.current_streak}
-              </p>
-              <p className="text-[10px] text-[var(--color-text-muted)]">Racha de diario</p>
-            </div>
-          </div>
-          <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-            {data.total_entries} entradas totales
-          </p>
-        </div>
-      </div>
-
-      {/* ── Row 2: Main Charts ────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Mood & Energy Trend */}
-        <div className="card-static animate-slide-in-up" style={{ animationDelay: "240ms" }}>
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
-                Tendencia de Ánimo y Energía
+            <div className="min-w-0 flex-1">
+              <p className="fryd-section-label">MOMENTUM PERSONAL</p>
+              <h2 className="mt-2 text-xl font-semibold tracking-[-0.02em] text-[var(--color-text-primary)]">
+                Tu sistema está {analytics.momentumScore >= 70 ? "tomando buen ritmo" : "ganando estabilidad"}
               </h2>
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Últimos 30 días</p>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.primary }} />
-                <span className="text-[10px] text-[var(--color-text-muted)]">Energía</span>
+              <p className="mt-2 max-w-2xl text-sm text-[var(--color-text-secondary)]">
+                Este indicador combina cumplimiento de tareas, consistencia de hábitos y energía registrada. No busca medir cuánto haces, sino qué tan sostenible se ve tu ritmo.
+              </p>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                <div className="fryd-analytics-mini-metric">
+                  <span>Balance 4 semanas</span>
+                  <strong className={analytics.weeklyBalance >= 0 ? "text-emerald-300" : "text-amber-300"}>
+                    {analytics.weeklyBalance >= 0 ? "+" : ""}{analytics.weeklyBalance}
+                  </strong>
+                  <small>completadas vs creadas</small>
+                </div>
+                <div className="fryd-analytics-mini-metric">
+                  <span>Energía reciente</span>
+                  <strong className={analytics.energyDelta >= 0 ? "text-cyan-300" : "text-amber-300"}>
+                    {analytics.energyDelta > 0 ? "+" : ""}{analytics.energyDelta.toFixed(1)}
+                  </strong>
+                  <small>vs semana anterior</small>
+                </div>
+                <div className="fryd-analytics-mini-metric">
+                  <span>Hábito más sólido</span>
+                  <strong className="truncate text-indigo-200">
+                    {analytics.strongestHabit?.name || "—"}
+                  </strong>
+                  <small>{analytics.strongestHabit ? `${Math.round(analytics.strongestHabit.completion_rate)}% consistencia` : "Sin datos suficientes"}</small>
+                </div>
               </div>
             </div>
           </div>
-          <div className="h-[260px]">
-            {moodTrendFormatted.length > 0 ? (
+        </article>
+
+        <aside className="fryd-analytics-insight">
+          <div className="fryd-insight-mark" aria-hidden="true">✦</div>
+          <div>
+            <p className="fryd-section-label">LECTURA FRYD</p>
+            <h2 className="mt-2 text-base font-semibold text-[var(--color-text-primary)]">
+              {analytics.insightTitle}
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--color-text-secondary)]">
+              {analytics.insightBody}
+            </p>
+          </div>
+          <div className="mt-auto border-t border-[var(--color-border-subtle)] pt-4">
+            <p className="text-[11px] leading-5 text-[var(--color-text-muted)]">
+              Esta lectura se calcula con tus métricas actuales; no sustituye tu propio contexto ni pretende evaluar tu rendimiento personal.
+            </p>
+          </div>
+        </aside>
+      </section>
+
+      <section className="mt-9 grid gap-x-5 gap-y-9 xl:grid-cols-2">
+        <article className="fryd-analytics-panel">
+          <div className="fryd-analytics-panel-header">
+            <div>
+              <p className="fryd-section-label">EJECUCIÓN</p>
+              <h2>Productividad semanal</h2>
+              <p>Compara el volumen de tareas creadas y completadas durante las últimas semanas.</p>
+            </div>
+            <div className="fryd-chart-legend">
+              <span><i style={{ backgroundColor: CHART.blue }} />Creadas</span>
+              <span><i style={{ backgroundColor: CHART.teal }} />Completadas</span>
+            </div>
+          </div>
+
+          <div className="h-[285px] w-full">
+            {data.task_productivity.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={moodTrendFormatted}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
-                  <XAxis
-                    dataKey="shortDate"
-                    tick={{ fontSize: 10, fill: COLORS.axis }}
-                    tickLine={false}
-                    axisLine={{ stroke: COLORS.grid }}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    domain={[0, 5]}
-                    tick={{ fontSize: 10, fill: COLORS.axis }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={30}
-                  />
+                <BarChart data={data.task_productivity} barGap={5} margin={{ top: 10, right: 2, left: -18, bottom: 0 }}>
+                  <CartesianGrid stroke={CHART.grid} vertical={false} />
+                  <XAxis dataKey="week_label" tick={{ fontSize: 10, fill: CHART.axis }} tickLine={false} axisLine={false} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: CHART.axis }} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={{ fill: "rgba(99, 102, 241, 0.035)" }} content={<ChartTooltip />} />
+                  <Bar dataKey="created" name="Creadas" fill={CHART.blue} radius={[7, 7, 2, 2]} maxBarSize={34} />
+                  <Bar dataKey="completed" name="Completadas" fill={CHART.teal} radius={[7, 7, 2, 2]} maxBarSize={34} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="fryd-analytics-empty">Aún no hay actividad semanal suficiente.</div>
+            )}
+          </div>
+        </article>
+
+        <article className="fryd-analytics-panel">
+          <div className="fryd-analytics-panel-header">
+            <div>
+              <p className="fryd-section-label">BIENESTAR</p>
+              <h2>Energía y ánimo</h2>
+              <p>Observa cómo ha cambiado tu energía y qué estados de ánimo aparecen alrededor de esos cambios.</p>
+            </div>
+            <div className="fryd-chart-legend">
+              <span><i style={{ backgroundColor: CHART.violet }} />Energía</span>
+            </div>
+          </div>
+
+          <div className="h-[285px] w-full">
+            {moodTrend.length ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={moodTrend} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
+                  <CartesianGrid stroke={CHART.grid} vertical={false} />
+                  <XAxis dataKey="shortDate" tick={{ fontSize: 10, fill: CHART.axis }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis domain={[0, 5]} tick={{ fontSize: 10, fill: CHART.axis }} tickLine={false} axisLine={false} />
                   <Tooltip
                     content={({ active, payload, label }) => {
                       if (!active || !payload?.length) return null;
                       const point = payload[0]?.payload;
                       return (
-                        <div className="bg-[rgba(15,15,20,0.95)] border border-[rgba(255,255,255,0.1)] rounded-xl px-3.5 py-2.5 shadow-2xl backdrop-blur-md">
-                          <p className="text-[10px] text-[rgba(255,255,255,0.4)] font-semibold uppercase tracking-wider mb-1.5">
-                            {label}
-                          </p>
-                          <div className="flex items-center gap-2 text-xs mb-1">
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS.primary }} />
-                            <span className="text-[rgba(255,255,255,0.6)]">Energía:</span>
-                            <span className="font-semibold text-white">{point?.energy_level}/5</span>
+                        <div className="fryd-chart-tooltip">
+                          <p className="fryd-chart-tooltip-label">{label}</p>
+                          <div className="flex items-center justify-between gap-5 text-xs">
+                            <span className="text-[var(--color-text-secondary)]">Energía</span>
+                            <strong className="text-[var(--color-text-primary)]">{point?.energy_level}/5</strong>
                           </div>
-                          <div className="flex items-center gap-2 text-xs">
-                            <span>{point?.moodEmoji}</span>
-                            <span className="text-[rgba(255,255,255,0.6)]">Ánimo:</span>
-                            <span className="font-semibold text-white">{point?.moodLabel}</span>
+                          <div className="mt-1.5 flex items-center justify-between gap-5 text-xs">
+                            <span className="text-[var(--color-text-secondary)]">Ánimo</span>
+                            <strong className="text-[var(--color-text-primary)]">{point?.moodEmoji} {point?.moodLabel}</strong>
                           </div>
                         </div>
                       );
@@ -378,263 +490,130 @@ export default function AnalyticsPage() {
                   <Line
                     type="monotone"
                     dataKey="energy_level"
-                    stroke={COLORS.primary}
-                    strokeWidth={2.5}
-                    dot={(props: any) => {
-                      const moodColor = moodConfig[props.payload?.mood]?.color || "#9ca3af";
-                      return (
-                        <circle
-                          key={props.key}
-                          cx={props.cx}
-                          cy={props.cy}
-                          r={4}
-                          fill={moodColor}
-                          stroke="rgba(0,0,0,0.3)"
-                          strokeWidth={1}
-                        />
-                      );
-                    }}
-                    activeDot={{ r: 6, strokeWidth: 2, stroke: "#fff" }}
                     name="Energía"
+                    stroke={CHART.violet}
+                    strokeWidth={2.5}
+                    dot={(props: any) => (
+                      <circle
+                        key={`${props.payload?.date}-${props.index}`}
+                        cx={props.cx}
+                        cy={props.cy}
+                        r={3.5}
+                        fill={moodConfig[props.payload?.mood]?.color || CHART.violet}
+                        stroke="var(--color-surface-card)"
+                        strokeWidth={2}
+                      />
+                    )}
+                    activeDot={{ r: 5.5, strokeWidth: 2, stroke: "#ffffff" }}
                   />
                 </LineChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-sm text-[var(--color-text-muted)]">
-                No hay datos de diario para mostrar
-              </div>
+              <div className="fryd-analytics-empty">Registra entradas en tu diario para descubrir esta tendencia.</div>
             )}
           </div>
-          {/* Mini mood legend */}
-          <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-[var(--color-border-subtle)]">
-            {Object.entries(moodConfig).map(([key, cfg]) => (
-              <div key={key} className="flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.color }} />
-                <span className="text-[9px] text-[var(--color-text-muted)]">{cfg.emoji} {cfg.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
 
-        {/* Task Productivity */}
-        <div className="card-static animate-slide-in-up" style={{ animationDelay: "300ms" }}>
-          <div className="flex items-center justify-between mb-4">
+          {moodTrend.length > 0 && (
+            <div className="fryd-mood-legend">
+              {Object.values(moodConfig).map((mood) => (
+                <span key={mood.label}><i style={{ backgroundColor: mood.color }} />{mood.emoji} {mood.label}</span>
+              ))}
+            </div>
+          )}
+        </article>
+      </section>
+
+      <section className="mt-5 grid gap-5 xl:grid-cols-[0.9fr_1.35fr]">
+        <article className="fryd-analytics-panel">
+          <div className="fryd-analytics-panel-header">
             <div>
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
-                Productividad Semanal
-              </h2>
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">Últimas 4 semanas</p>
+              <p className="fryd-section-label">CONSTANCIA</p>
+              <h2>Hábitos que sostienen tu ritmo</h2>
+              <p>Ordenados por cumplimiento durante los últimos 30 días.</p>
             </div>
           </div>
-          <div className="h-[260px]">
-            {data.task_productivity.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.task_productivity} barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
-                  <XAxis
-                    dataKey="week_label"
-                    tick={{ fontSize: 9, fill: COLORS.axis }}
-                    tickLine={false}
-                    axisLine={{ stroke: COLORS.grid }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: COLORS.axis }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={30}
-                    allowDecimals={false}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: "10px", color: "rgba(255,255,255,0.5)" }}
-                  />
-                  <Bar
-                    dataKey="created"
-                    name="Creadas"
-                    fill={COLORS.info}
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={32}
-                  />
-                  <Bar
-                    dataKey="completed"
-                    name="Completadas"
-                    fill={COLORS.primary}
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={32}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-sm text-[var(--color-text-muted)]">
-                No hay tareas para mostrar
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* ── Row 3: Secondary Charts ───────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Habit Consistency */}
-        <div className="card-static animate-slide-in-up" style={{ animationDelay: "360ms" }}>
-          <div className="mb-4">
-            <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
-              Consistencia de Hábitos
-            </h2>
-            <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-              % de cumplimiento en los últimos 30 días
-            </p>
-          </div>
-          <div className="h-[260px]">
-            {data.habit_consistency.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={data.habit_consistency}
-                  layout="vertical"
-                  margin={{ left: 10, right: 20 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} horizontal={false} />
-                  <XAxis
-                    type="number"
-                    domain={[0, 100]}
-                    tick={{ fontSize: 10, fill: COLORS.axis }}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v) => `${v}%`}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fontSize: 11, fill: "rgba(255,255,255,0.7)" }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={100}
-                  />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (!active || !payload?.length) return null;
-                      const item = payload[0]?.payload as HabitConsistencyItem;
-                      return (
-                        <div className="bg-[rgba(15,15,20,0.95)] border border-[rgba(255,255,255,0.1)] rounded-xl px-3.5 py-2.5 shadow-2xl backdrop-blur-md">
-                          <p className="text-xs font-semibold text-white mb-1">{item.name}</p>
-                          <p className="text-[10px] text-[rgba(255,255,255,0.6)]">
-                            {item.completed_days} de {item.total_days} días ({item.completion_rate}%)
-                          </p>
+          {data.habit_consistency.length ? (
+            <div className="space-y-4 pt-1">
+              {[...data.habit_consistency]
+                .sort((a, b) => b.completion_rate - a.completion_rate)
+                .slice(0, 7)
+                .map((habit, index) => {
+                  const tone = getConsistencyTone(habit.completion_rate);
+                  return (
+                    <div key={habit.name} className="fryd-habit-analytics-row">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="fryd-habit-rank">{index + 1}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <strong className="truncate text-sm font-medium text-[var(--color-text-primary)]">{habit.name}</strong>
+                            <span className="text-xs font-semibold" style={{ color: tone.color }}>{Math.round(habit.completion_rate)}%</span>
+                          </div>
+                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--color-surface-input)]">
+                            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${clamp(habit.completion_rate)}%`, backgroundColor: tone.color }} />
+                          </div>
+                          <div className="mt-1.5 flex items-center justify-between text-[10px] text-[var(--color-text-muted)]">
+                            <span>{habit.completed_days} de {habit.total_days} días</span>
+                            <span>{tone.label}</span>
+                          </div>
                         </div>
-                      );
-                    }}
-                  />
-                  <Bar
-                    dataKey="completion_rate"
-                    name="Consistencia %"
-                    radius={[0, 6, 6, 0]}
-                    maxBarSize={24}
-                  >
-                    {data.habit_consistency.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={getConsistencyColor(entry.completion_rate)}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="flex items-center justify-center h-full text-sm text-[var(--color-text-muted)]">
-                No hay hábitos activos para analizar
-              </div>
-            )}
-          </div>
-        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          ) : (
+            <div className="fryd-analytics-empty min-h-[230px]">Activa hábitos para comparar su consistencia.</div>
+          )}
+        </article>
 
-        {/* Daily Correlation */}
-        <div className="card-static animate-slide-in-up" style={{ animationDelay: "420ms" }}>
-          <div className="flex items-center justify-between mb-4">
+        <article className="fryd-analytics-panel">
+          <div className="fryd-analytics-panel-header">
             <div>
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">
-                Correlación Diaria
-              </h2>
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
-                Energía vs Hábitos vs Tareas (14 días)
-              </p>
+              <p className="fryd-section-label">RITMO DIARIO</p>
+              <h2>Cómo se mueven juntas tus señales</h2>
+              <p>Energía, hábitos completados y tareas completadas durante los últimos 14 días.</p>
+            </div>
+            <div className="fryd-chart-legend">
+              <span><i style={{ backgroundColor: CHART.warning }} />Energía</span>
+              <span><i style={{ backgroundColor: CHART.teal }} />Hábitos</span>
+              <span><i style={{ backgroundColor: CHART.blue }} />Tareas</span>
             </div>
           </div>
-          <div className="h-[260px]">
-            {correlationFormatted.length > 0 ? (
+
+          <div className="h-[315px] w-full">
+            {dailyRhythm.length ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={correlationFormatted}>
+                <AreaChart data={dailyRhythm} margin={{ top: 10, right: 8, left: -18, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="energyGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.warning} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={COLORS.warning} stopOpacity={0} />
+                    <linearGradient id="energyArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.warning} stopOpacity={0.20} />
+                      <stop offset="100%" stopColor={CHART.warning} stopOpacity={0} />
                     </linearGradient>
-                    <linearGradient id="habitsGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.primary} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={COLORS.primary} stopOpacity={0} />
+                    <linearGradient id="habitArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.teal} stopOpacity={0.17} />
+                      <stop offset="100%" stopColor={CHART.teal} stopOpacity={0} />
                     </linearGradient>
-                    <linearGradient id="tasksGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={COLORS.info} stopOpacity={0.3} />
-                      <stop offset="95%" stopColor={COLORS.info} stopOpacity={0} />
+                    <linearGradient id="taskArea" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={CHART.blue} stopOpacity={0.15} />
+                      <stop offset="100%" stopColor={CHART.blue} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} />
-                  <XAxis
-                    dataKey="shortDate"
-                    tick={{ fontSize: 9, fill: COLORS.axis }}
-                    tickLine={false}
-                    axisLine={{ stroke: COLORS.grid }}
-                    interval="preserveStartEnd"
-                  />
-                  <YAxis
-                    tick={{ fontSize: 10, fill: COLORS.axis }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={30}
-                    allowDecimals={false}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    iconType="circle"
-                    iconSize={8}
-                    wrapperStyle={{ fontSize: "10px", color: "rgba(255,255,255,0.5)" }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="energy"
-                    name="Energía"
-                    stroke={COLORS.warning}
-                    strokeWidth={2}
-                    fill="url(#energyGradient)"
-                    connectNulls
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="habits_completed"
-                    name="Hábitos"
-                    stroke={COLORS.primary}
-                    strokeWidth={2}
-                    fill="url(#habitsGradient)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="tasks_completed"
-                    name="Tareas"
-                    stroke={COLORS.info}
-                    strokeWidth={2}
-                    fill="url(#tasksGradient)"
-                  />
+                  <CartesianGrid stroke={CHART.grid} vertical={false} />
+                  <XAxis dataKey="shortDate" tick={{ fontSize: 10, fill: CHART.axis }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: CHART.axis }} tickLine={false} axisLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Area type="monotone" dataKey="energy" name="Energía" stroke={CHART.warning} strokeWidth={2} fill="url(#energyArea)" connectNulls />
+                  <Area type="monotone" dataKey="habits_completed" name="Hábitos" stroke={CHART.teal} strokeWidth={2} fill="url(#habitArea)" />
+                  <Area type="monotone" dataKey="tasks_completed" name="Tareas" stroke={CHART.blue} strokeWidth={2} fill="url(#taskArea)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-full text-sm text-[var(--color-text-muted)]">
-                No hay datos suficientes
-              </div>
+              <div className="fryd-analytics-empty">Aún no hay suficiente actividad diaria para comparar señales.</div>
             )}
           </div>
-        </div>
-      </div>
+        </article>
+      </section>
     </div>
   );
 }

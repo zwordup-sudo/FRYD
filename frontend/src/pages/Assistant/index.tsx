@@ -83,7 +83,7 @@ const insightStyles: Record<string, { bg: string; border: string; text: string }
   success: {
     bg: "rgba(52, 211, 153, 0.08)",
     border: "rgba(52, 211, 153, 0.25)",
-    text: "var(--color-accent-primary)",
+    text: "var(--color-accent-success)",
   },
   warning: {
     bg: "rgba(251, 191, 36, 0.08)",
@@ -403,233 +403,209 @@ export default function AssistantPage() {
     : conversations;
 
   return (
-    <div className="animate-fade-in h-full flex flex-col -m-4 sm:-m-6 lg:-m-8">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-elevated)] flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl gradient-blue flex items-center justify-center shadow-lg">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.8">
-              <path d="M12 2a7 7 0 017 7v1a7 7 0 01-14 0V9a7 7 0 017-7z" />
-              <path d="M8 21h8M12 17v4" />
+    <div className="assistant-page animate-fade-in h-full flex flex-col">
+      {/* FRYD Intelligence header */}
+      <header className="assistant-topbar flex-shrink-0">
+        <div className="assistant-title-group">
+          <div className="assistant-brain-mark" aria-hidden="true">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9.5 4.5A3 3 0 006 7.5v1A3.5 3.5 0 004.5 15 3.5 3.5 0 008 18.5h1.5V4.5z" />
+              <path d="M14.5 4.5A3 3 0 0118 7.5v1a3.5 3.5 0 011.5 6.5 3.5 3.5 0 01-3.5 3.5h-1.5V4.5z" />
+              <path d="M9.5 9H7.8M14.5 9h1.7M9.5 14H8M14.5 14H16M12 3v18" />
             </svg>
           </div>
-          <div>
-            <h1 className="text-base font-semibold text-[var(--color-text-primary)]">Cerebro Digital</h1>
-            <div className="flex items-center gap-1.5">
-              <div className="status-dot status-dot-active" />
-              <span className="text-xs text-[var(--color-text-muted)]">
-                {icon} {currentProvider?.name || selectedProvider}
-              </span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <p className="fryd-section-label">Inteligencia FRYD</p>
+              <span className="assistant-live-pill"><span className="status-dot status-dot-active" /> En línea</span>
             </div>
+            <h1 className="assistant-page-title">Cerebro Digital</h1>
+            <p className="assistant-page-subtitle">Explora las conexiones entre lo que haces, piensas y construyes.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Toggle de Modo de Vista */}
+        <div className="assistant-toolbar">
           {!isLoadingGraph && graphData.nodes.length > 0 && (
-            <div className="flex items-center gap-1.5 mr-2">
-              <div className="bg-[var(--color-surface-card)] border border-[var(--color-border-default)] p-0.5 rounded-lg flex gap-0.5">
-                <button
-                  onClick={() => setViewMode("creative")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                    viewMode === "creative"
-                      ? "bg-[var(--color-accent-primary)] text-white shadow-sm"
-                      : "text-[var(--color-text-secondary)] hover:bg-white/[0.04] hover:text-[var(--color-text-primary)]"
-                  }`}
-                  title="Exploración Creativa / Divergente"
-                >
-                  <span>🎨</span>
-                  <span className="hidden md:inline">Divergente</span>
-                </button>
-                <button
-                  onClick={() => setViewMode("zen")}
-                  className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all flex items-center gap-1 cursor-pointer ${
-                    viewMode === "zen"
-                      ? "bg-[var(--color-accent-primary)] text-white shadow-sm"
-                      : "text-[var(--color-text-secondary)] hover:bg-white/[0.04] hover:text-[var(--color-text-primary)]"
-                  }`}
-                  title="Vista Ordenada / Zen"
-                >
-                  <span>🧘</span>
-                  <span className="hidden md:inline">Zen</span>
-                </button>
-              </div>
+            <div className="assistant-view-switch" aria-label="Modo de visualización">
+              <button
+                type="button"
+                onClick={() => setViewMode("creative")}
+                className={viewMode === "creative" ? "is-active" : ""}
+                title="Mapa de conexiones"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 11l8-4M8 13l8 4"/></svg>
+                <span>Mapa</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("zen")}
+                className={viewMode === "zen" ? "is-active" : ""}
+                title="Vista por colecciones"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                <span>Colecciones</span>
+              </button>
+            </div>
+          )}
 
-              {/* Filtro de Categorías */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                  className={`btn-secondary text-xs py-1 px-2.5 flex items-center gap-1 cursor-pointer ${
-                    Object.values(visibleTypes).includes(false)
-                      ? "border-[var(--color-accent-primary)] text-[var(--color-accent-primary)] bg-[var(--color-accent-primary-glow)]"
-                      : ""
-                  }`}
-                  title="Filtrar tipos de nodo"
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
-                  </svg>
-                  <span>Filtrar</span>
-                </button>
-
-                {showFilterDropdown && (
-                  <div 
-                    className="absolute right-0 mt-2 w-48 card-static z-30 shadow-xl border border-[var(--color-border-default)] p-3 space-y-2.5"
-                    style={{ background: "var(--color-surface-elevated)" }}
-                  >
-                    <h4 className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider mb-1">Mostrar en Cerebro</h4>
-                    <div className="space-y-2">
-                      {[
-                        { type: "diary", label: "📝 Diarios" },
-                        { type: "habit", label: "⚡ Hábitos" },
-                        { type: "task", label: "✅ Tareas" },
-                        { type: "concept", label: "🧠 Conceptos" },
-                        { type: "project", label: "📁 Proyectos" },
-                        { type: "project_task", label: "📋 Tareas Proj." },
-                      ].map((item) => (
-                        <label key={item.type} className="flex items-center gap-2.5 text-xs text-[var(--color-text-secondary)] hover:text-white cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={visibleTypes[item.type]}
-                            onChange={() => setVisibleTypes({
-                              ...visibleTypes,
-                              [item.type]: !visibleTypes[item.type],
-                            })}
-                            className="rounded border-[var(--color-border-default)] text-[var(--color-accent-primary)] focus:ring-[var(--color-accent-primary-glow)]"
-                          />
-                          <span>{item.label}</span>
-                        </label>
-                      ))}
+          {!isLoadingGraph && graphData.nodes.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
+                className={`assistant-icon-button ${Object.values(visibleTypes).includes(false) ? "is-active" : ""}`}
+                title="Filtrar elementos"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M7 12h10M10 18h4"/></svg>
+              </button>
+              {showFilterDropdown && (
+                <div className="assistant-filter-popover">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="fryd-section-label">Visibilidad</p>
+                      <p className="text-xs text-[var(--color-text-secondary)] mt-1">Elige qué vive en el mapa.</p>
                     </div>
+                    <button type="button" className="btn-ghost p-1.5" onClick={() => setShowFilterDropdown(false)} aria-label="Cerrar filtros">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                    </button>
                   </div>
-                )}
+                  <div className="space-y-1.5">
+                    {[
+                      { type: "diary", label: "Diario", dot: "assistant-dot-diary" },
+                      { type: "habit", label: "Hábitos", dot: "assistant-dot-habit" },
+                      { type: "task", label: "Tareas", dot: "assistant-dot-task" },
+                      { type: "concept", label: "Conceptos IA", dot: "assistant-dot-concept" },
+                      { type: "project", label: "Proyectos", dot: "assistant-dot-project" },
+                      { type: "project_task", label: "Tareas de proyecto", dot: "assistant-dot-project-task" },
+                    ].map((item) => (
+                      <label key={item.type} className="assistant-filter-row">
+                        <span className={`assistant-filter-dot ${item.dot}`} />
+                        <span className="flex-1">{item.label}</span>
+                        <input
+                          type="checkbox"
+                          checked={visibleTypes[item.type]}
+                          onChange={() => setVisibleTypes({ ...visibleTypes, [item.type]: !visibleTypes[item.type] })}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          <button type="button" onClick={loadGraph} className="assistant-icon-button" title="Actualizar cerebro">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 6v5h-5M4 18v-5h5"/><path d="M18.2 9A7 7 0 006.1 6.3L4 11M5.8 15A7 7 0 0017.9 17.7L20 13"/></svg>
+          </button>
+          <button type="button" onClick={() => setShowHistoryPanel(!showHistoryPanel)} className={`assistant-icon-button ${showHistoryPanel ? "is-active" : ""}`} title="Historial">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 12a9 9 0 109-9 9.7 9.7 0 00-6.7 2.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
+          </button>
+          <button type="button" onClick={startNewConversation} className="assistant-icon-button" title="Nueva conversación">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+          </button>
+          <button type="button" onClick={() => setShowChatPanel(!showChatPanel)} className={`assistant-chat-toggle ${showChatPanel ? "is-active" : ""}`}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z"/></svg>
+            <span>FRYD AI</span>
+          </button>
+          <button type="button" onClick={() => setShowProviderModal(true)} className="assistant-provider-chip" title="Configurar proveedor de IA">
+            <span>{icon}</span>
+            <span className="hidden xl:inline truncate max-w-[120px]">{currentProvider?.name || selectedProvider}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div className="assistant-shell flex-1 min-h-0">
+        {/* Conversation history */}
+        {showHistoryPanel && (
+          <aside className="assistant-history-panel animate-slide-in-left">
+            <div className="assistant-panel-header">
+              <div>
+                <p className="fryd-section-label">Memoria de chat</p>
+                <h2 className="text-sm font-semibold text-[var(--color-text-primary)] mt-1">Conversaciones</h2>
+              </div>
+              <button type="button" onClick={startNewConversation} className="assistant-mini-action" title="Nuevo chat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
+            <div className="px-3 pb-3">
+              <div className="assistant-search-wrap">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Buscar conversación" />
+              </div>
+            </div>
+            <div className="assistant-history-list">
+              {filteredConversations.map((conv) => (
+                <button
+                  type="button"
+                  key={conv.id}
+                  className={`assistant-history-item group ${conversationId === conv.id ? "is-active" : ""}`}
+                  onClick={() => loadConversation(conv.id)}
+                >
+                  <span className="assistant-history-icon">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z"/></svg>
+                  </span>
+                  <span className="flex-1 min-w-0 text-left">
+                    <span className="block truncate text-xs font-medium">{conv.title || "Sin título"}</span>
+                    <span className="block text-[10px] text-[var(--color-text-muted)] mt-0.5">{conv.message_count} mensajes</span>
+                  </span>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); handleDeleteConversation(conv.id); } }}
+                    className="assistant-history-delete"
+                    aria-label="Eliminar conversación"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                  </span>
+                </button>
+              ))}
+              {filteredConversations.length === 0 && (
+                <div className="assistant-panel-empty">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M21 15a4 4 0 01-4 4H8l-5 3V7a4 4 0 014-4h10a4 4 0 014 4z"/></svg>
+                  <p>{searchQuery ? "No encontramos coincidencias." : "Tus conversaciones aparecerán aquí."}</p>
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
+
+        {/* Knowledge workspace */}
+        <main className="assistant-brain-stage">
+          {!isLoadingGraph && graphData.nodes.length > 0 && (
+            <div className="assistant-stage-hud">
+              <div className="assistant-stage-meta">
+                <span className="assistant-stage-kicker">{viewMode === "creative" ? "Mapa de conocimiento" : "Colecciones de conocimiento"}</span>
+                <span className="assistant-stage-divider" />
+                <span><strong>{filteredGraphData.nodes.length}</strong> elementos</span>
+                <span><strong>{filteredGraphData.links.length}</strong> conexiones</span>
+              </div>
+              <div className="assistant-stage-hint hidden lg:flex">
+                {viewMode === "creative" ? "Arrastra · acerca · explora" : "Selecciona una tarjeta para contextualizar a FRYD"}
               </div>
             </div>
           )}
-          <button onClick={loadGraph} className="btn-secondary p-2 text-xs" title="Actualizar cerebro">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 11-.57-8.38l5.67-5.67"/></svg>
-          </button>
-          <button
-            onClick={() => setShowHistoryPanel(!showHistoryPanel)}
-            className={`btn-ghost text-xs ${showHistoryPanel ? "bg-white/[0.08]" : ""}`}
-            title="Historial de Chat"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-          </button>
-          <button onClick={startNewConversation} className="btn-ghost text-xs" title="Nuevo Chat">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          </button>
-          <button
-            onClick={() => setShowChatPanel(!showChatPanel)}
-            className={`btn-secondary text-xs flex items-center gap-1.5 ${showChatPanel ? "border-[var(--color-accent-primary)] bg-[var(--color-accent-primary-glow)] text-[var(--color-accent-primary)]" : ""}`}
-            title="Mostrar/Ocultar Chat"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-            <span>Chat</span>
-          </button>
-          <button
-            onClick={() => setShowProviderModal(true)}
-            className="btn-secondary text-xs"
-          >
-            <span>{icon}</span>
-            <span className="hidden sm:inline ml-1">{currentProvider?.name || selectedProvider}</span>
-          </button>
-        </div>
-      </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* History panel with search */}
-        {showHistoryPanel && (
-          <div className="w-64 border-r border-[var(--color-border-default)] bg-[var(--color-surface-elevated)] overflow-y-auto flex-shrink-0 animate-slide-in-left z-10 flex flex-col">
-            <div className="p-3 flex flex-col gap-2">
-              <h3 className="text-xs font-semibold text-[var(--color-text-muted)] uppercase tracking-wider">Chats Anteriores</h3>
-              {/* Search bar (Mejora 7) */}
-              <div className="relative">
-                <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                <input
-                  type="text"
-                  placeholder="Buscar conversación..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="fryd-input text-[10px] py-1.5 pl-7 pr-2"
-                />
-              </div>
-            </div>
-            <div className="flex-1 overflow-y-auto px-3 pb-3 space-y-1">
-              {filteredConversations.map((conv) => (
-                <div
-                  key={conv.id}
-                  className={`group flex items-center gap-2 p-2.5 rounded-lg cursor-pointer transition-all text-sm ${
-                    conversationId === conv.id
-                      ? "bg-[var(--color-accent-primary-glow)] text-[var(--color-accent-primary)] font-medium"
-                      : "text-[var(--color-text-secondary)] hover:bg-white/[0.04]"
-                  }`}
-                  onClick={() => loadConversation(conv.id)}
-                >
-                  <span className="flex-1 truncate text-xs">{conv.title || "Sin título"}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id); }}
-                    className="opacity-0 group-hover:opacity-100 btn-danger p-1"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
-                  </button>
-                </div>
-              ))}
-              {filteredConversations.length === 0 && (
-                <p className="text-xs text-[var(--color-text-muted)] p-2">
-                  {searchQuery ? "Sin resultados" : "Sin chats guardados"}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Main Content Split: Graph and Sidebar */}
-        <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
-
-          {/* Left panel: The Knowledge Graph */}
-          <div className="flex-1 h-2/3 md:h-full border-b md:border-b-0 md:border-r border-[var(--color-border-default)] bg-[var(--color-bg-primary)] relative">
-
+          <div className="assistant-brain-canvas">
             {isLoadingGraph ? (
-              <div className="flex flex-col items-center justify-center h-full gap-3">
-                <div className="w-8 h-8 rounded-full border-4 border-[var(--color-accent-primary-glow)] border-t-[var(--color-accent-primary)] animate-spin" />
-                <p className="text-xs text-[var(--color-text-muted)]">Cargando tu Cerebro Digital...</p>
+              <div className="assistant-loading-state">
+                <div className="assistant-orbit-loader"><span /><span /><span /></div>
+                <p className="text-sm font-medium text-[var(--color-text-primary)]">Conectando tus ideas</p>
+                <p className="text-xs text-[var(--color-text-muted)]">FRYD está reconstruyendo tu mapa personal.</p>
               </div>
             ) : graphData.nodes.length === 0 ? (
-              /* Empty state premium (Mejora 8) */
-              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-                <div className="relative mb-6">
-                  <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[var(--color-accent-primary)] to-[var(--color-accent-secondary)] opacity-10 blur-2xl absolute inset-0 m-auto" />
-                  <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-[var(--color-accent-primary-glow)] to-[var(--color-accent-secondary)]/10 border border-[var(--color-border-default)] flex items-center justify-center mx-auto">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="var(--color-accent-primary)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 2a7 7 0 017 7v1a7 7 0 01-14 0V9a7 7 0 017-7z" />
-                      <circle cx="9" cy="9" r="1" fill="currentColor" />
-                      <circle cx="15" cy="9" r="1" fill="currentColor" />
-                      <path d="M9 13c1.5 1.5 4.5 1.5 6 0" />
-                      <path d="M8 21h8M12 17v4" />
-                    </svg>
-                  </div>
+              <div className="assistant-empty-brain">
+                <div className="assistant-empty-symbol">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 11l8-4M8 13l8 4"/></svg>
                 </div>
-                <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-2">
-                  Tu cerebro digital está naciendo
-                </h3>
-                <p className="text-xs text-[var(--color-text-muted)] max-w-xs mb-5 leading-relaxed">
-                  A medida que uses FRYD, aquí se visualizarán las conexiones entre tus tareas, hábitos y reflexiones.
-                </p>
-                <div className="flex flex-col gap-2 w-full max-w-[200px]">
-                  {[
-                    { label: "📝 Escribe en tu diario", path: "/diary" },
-                    { label: "⚡ Crea un hábito", path: "/habit" },
-                    { label: "✅ Agrega una tarea", path: "/task" },
-                  ].map((action) => (
-                    <a
-                      key={action.path}
-                      href={action.path}
-                      className="text-xs p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-default)] hover:border-[var(--color-accent-primary)] text-[var(--color-text-secondary)] transition-all text-center hover:bg-[var(--color-accent-primary-glow)]"
-                    >
-                      {action.label}
-                    </a>
-                  ))}
+                <p className="fryd-section-label">Primeras conexiones</p>
+                <h2>Tu cerebro digital crece contigo.</h2>
+                <p>Crea actividad en FRYD y aquí aparecerán relaciones entre tareas, hábitos, proyectos y reflexiones.</p>
+                <div className="assistant-empty-actions">
+                  <a href="/task">Crear tarea</a>
+                  <a href="/habit">Crear hábito</a>
+                  <a href="/diary">Escribir en diario</a>
                 </div>
               </div>
             ) : viewMode === "creative" ? (
@@ -642,272 +618,157 @@ export default function AssistantPage() {
                 selectedNodeId={selectedNode?.id || null}
               />
             ) : (
-              <ZenView
-                data={filteredGraphData}
-                onNodeSelect={(node) => setSelectedNode(node)}
-                selectedNodeId={selectedNode?.id || null}
-              />
+              <ZenView data={filteredGraphData} onNodeSelect={(node) => setSelectedNode(node)} selectedNodeId={selectedNode?.id || null} />
             )}
           </div>
+        </main>
 
-          {showChatPanel && (
-            <div className="w-full md:w-96 h-1/3 md:h-full bg-[var(--color-surface-elevated)] flex flex-col flex-shrink-0 overflow-hidden">
-
-              {/* Context details section */}
-              <div className="p-4 border-b border-[var(--color-border-default)] bg-[var(--color-surface-card)] flex-shrink-0">
-                {selectedNode ? (
-                  <div>
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                        Nodo Seleccionado
-                      </span>
-                      <button
-                        onClick={() => setSelectedNode(null)}
-                        className="text-xs text-[var(--color-accent-primary)] hover:underline flex items-center gap-1"
-                      >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
-                        Volver al cerebro
-                      </button>
-                    </div>
-
-                    <h3 className="font-semibold text-sm text-[var(--color-text-primary)] flex items-center gap-2">
-                      {selectedNode.type === "diary" && "📝"}
-                      {selectedNode.type === "habit" && "⚡"}
-                      {selectedNode.type === "task" && "✅"}
-                      {selectedNode.type === "concept" && "🧠"}
-                      {selectedNode.type === "project" && "📁"}
-                      {selectedNode.type === "project_task" && "📋"}
-                      {selectedNode.label}
-                    </h3>
-
-                    <div className="mt-2 text-xs text-[var(--color-text-secondary)] max-h-28 overflow-y-auto pr-1">
-                      {selectedNode.type === "diary" && selectedNode.details && (
-                        <div className="flex flex-col gap-1.5">
-                          {selectedNode.details.mood && <p><strong>Ánimo:</strong> {selectedNode.details.mood}</p>}
-                          {selectedNode.details.energy_level !== undefined && (
-                            <div className="flex items-center gap-1.5">
-                              <strong>Energía:</strong>
-                              <div className="w-20 h-1.5 rounded-full bg-[var(--color-border-default)] overflow-hidden">
-                                <div className="h-full bg-amber-500" style={{ width: `${selectedNode.details.energy_level * 20}%` }} />
-                              </div>
-                            </div>
-                          )}
-                          {selectedNode.details.content && <p className="italic text-[var(--color-text-muted)] mt-1 whitespace-pre-wrap">"{selectedNode.details.content}"</p>}
-                        </div>
-                      )}
-                      {selectedNode.type === "habit" && selectedNode.details && (
-                        <div className="flex flex-col gap-1">
-                          <p><strong>Frecuencia:</strong> {selectedNode.details.frequency}</p>
-                          <p><strong>Estado:</strong> {selectedNode.details.status === "active" ? "Activo" : "Inactivo"}</p>
-                          <p><strong>Completados:</strong> {selectedNode.details.completions_count} veces</p>
-                          {selectedNode.details.description && <p className="italic mt-1">"{selectedNode.details.description}"</p>}
-                        </div>
-                      )}
-                      {selectedNode.type === "task" && selectedNode.details && (
-                        <div className="flex flex-col gap-1">
-                          <p><strong>Estado:</strong> {selectedNode.details.status === "completed" ? "Completada" : "Pendiente"}</p>
-                          {selectedNode.details.due_date && <p><strong>Fecha límite:</strong> {selectedNode.details.due_date}</p>}
-                          {selectedNode.details.description && <p className="italic mt-1">"{selectedNode.details.description}"</p>}
-                        </div>
-                      )}
-                      {selectedNode.type === "project" && selectedNode.details && (
-                        <div className="flex flex-col gap-1">
-                          <p><strong>Metodología:</strong> {selectedNode.details.methodology.toUpperCase()}</p>
-                          <p><strong>Creado el:</strong> {selectedNode.details.created_at}</p>
-                          {selectedNode.details.description && <p className="italic mt-1">"{selectedNode.details.description}"</p>}
-                        </div>
-                      )}
-                      {selectedNode.type === "project_task" && selectedNode.details && (
-                        <div className="flex flex-col gap-1">
-                          <p><strong>Columna:</strong> {selectedNode.details.column_name}</p>
-                          <p><strong>Puntos de Historia:</strong> {selectedNode.details.story_points}</p>
-                          <p><strong>Recompensa XP:</strong> {selectedNode.details.xp_reward} XP</p>
-                          {selectedNode.details.due_date && <p><strong>Fecha límite:</strong> {selectedNode.details.due_date}</p>}
-                          {selectedNode.details.description && <p className="italic mt-1">"{selectedNode.details.description}"</p>}
-                        </div>
-                      )}
-                      {selectedNode.type === "concept" && (
-                        <p className="italic text-[var(--color-text-muted)]">
-                          Este concepto agrupa elementos que comparten este tema en común.
-                        </p>
-                      )}
-                    </div>
+        {/* FRYD AI context panel */}
+        {showChatPanel && (
+          <aside className="assistant-chat-panel animate-slide-in-right">
+            <div className="assistant-chat-header">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="assistant-ai-avatar">
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.8 4.6L18 9.4l-4.2 1.8L12 16l-1.8-4.8L6 9.4l4.2-1.8z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">FRYD AI</h2>
+                    <span className="assistant-ai-status">Contextual</span>
                   </div>
-                ) : (
-                  <div>
-                    <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider block mb-1">
-                      Cerebro Activo
-                    </span>
-                    <p className="text-xs text-[var(--color-text-secondary)]">
-                      Haz clic en un nodo para explorar sus detalles y preguntar a la IA.
+                  <p className="text-[10px] text-[var(--color-text-muted)] truncate">{currentProvider?.name || selectedProvider}{selectedModel ? ` · ${selectedModel}` : ""}</p>
+                </div>
+              </div>
+              <button type="button" onClick={() => setShowChatPanel(false)} className="assistant-mini-action" aria-label="Ocultar chat">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+
+            {selectedNode ? (
+              <div className="assistant-context-card">
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className={`assistant-context-dot assistant-dot-${selectedNode.type.replace("_", "-")}`} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="fryd-section-label">Contexto activo</span>
+                      <button type="button" onClick={() => setSelectedNode(null)} className="assistant-context-clear">Quitar</button>
+                    </div>
+                    <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-1 truncate">{selectedNode.label}</p>
+                    <p className="text-[11px] text-[var(--color-text-secondary)] mt-1 line-clamp-2">
+                      {selectedNode.type === "concept"
+                        ? "Concepto conectado por FRYD a elementos relacionados."
+                        : selectedNode.details?.description || selectedNode.details?.content || "FRYD usará este elemento como contexto para la conversación."}
                     </p>
                   </div>
-                )}
+                </div>
               </div>
+            ) : (
+              <div className="assistant-context-placeholder">
+                <div className="assistant-context-mini-icon">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="6" cy="12" r="2"/><circle cx="18" cy="6" r="2"/><circle cx="18" cy="18" r="2"/><path d="M8 11l8-4M8 13l8 4"/></svg>
+                </div>
+                <p><strong>Sin contexto fijado.</strong> Selecciona un elemento del cerebro para conversar sobre él.</p>
+              </div>
+            )}
 
-              {/* Chat Messages area */}
-              <div className="flex-1 overflow-y-auto p-4 flex flex-col">
-                {errorMessage && (
-                  <div className="alert alert-error mb-3 text-xs p-2 flex-shrink-0">
-                    {errorMessage}
+            <div className="assistant-message-stream">
+              {errorMessage && <div className="alert alert-error text-xs mb-3">{errorMessage}</div>}
+
+              {messages.length === 0 && (
+                <div className="assistant-chat-welcome">
+                  <div>
+                    <p className="fryd-section-label">Lectura FRYD</p>
+                    <h3 className="text-base font-semibold tracking-[-0.02em] text-[var(--color-text-primary)] mt-1.5">
+                      {selectedNode ? "Profundiza en esta conexión" : "Tu información ya tiene contexto"}
+                    </h3>
+                    <p className="text-xs text-[var(--color-text-secondary)] mt-1.5 leading-relaxed">
+                      {selectedNode
+                        ? "Pregunta, relaciona o transforma este elemento usando tu información de FRYD."
+                        : "Puedo ayudarte a encontrar patrones entre tus hábitos, tareas, proyectos y reflexiones."}
+                    </p>
                   </div>
-                )}
 
-                {messages.length === 0 && (
-                  <div className="my-auto flex flex-col gap-4">
-                    {/* Insights cards (Mejora 5) */}
-                    {!isLoadingInsights && insights.length > 0 && (
-                      <div className="flex flex-col gap-2 mb-2">
-                        <span className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-wider">
-                          Insights del día
-                        </span>
-                        {insights.map((insight, i) => {
-                          const style = insightStyles[insight.type] || insightStyles.info;
-                          return (
-                            <div
-                              key={i}
-                              className="p-3 rounded-xl border transition-all hover:scale-[1.01] cursor-default animate-slide-in-up"
-                              style={{
-                                background: style.bg,
-                                borderColor: style.border,
-                                animationDelay: `${i * 80}ms`,
-                              }}
-                            >
-                              <div className="flex items-start gap-2.5">
-                                <span className="text-lg flex-shrink-0">{insight.icon}</span>
-                                <div>
-                                  <p className="text-xs font-semibold" style={{ color: style.text }}>
-                                    {insight.title}
-                                  </p>
-                                  <p className="text-[10px] text-[var(--color-text-secondary)] mt-0.5 leading-relaxed">
-                                    {insight.description}
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {/* Quick suggestions */}
-                    <div className="text-center">
-                      <p className="text-xs text-[var(--color-text-muted)] px-4 mb-3">
-                        {selectedNode
-                          ? `Pregunta sobre "${selectedNode.label}"`
-                          : "¿En qué te puedo ayudar?"}
-                      </p>
-                      <div className="flex flex-col gap-1.5 max-w-[280px] mx-auto">
-                        {(selectedNode
-                          ? [
-                              "¿Qué consejos me das sobre esto?",
-                              "¿Con qué otros elementos se relaciona?",
-                              "Ayúdame a mejorar este aspect",
-                            ]
-                          : [
-                              "¿Cómo mejorar mi constancia?",
-                              "Analiza mi estado de ánimo reciente",
-                              "¿Qué hábitos están conectados con mis tareas?",
-                            ]
-                        ).map((suggestion) => (
-                          <button
-                            key={suggestion}
-                            onClick={() => handleQuickQuestion(suggestion)}
-                            className="text-left text-xs p-2.5 rounded-lg bg-[var(--color-surface-card)] border border-[var(--color-border-default)] hover:border-[var(--color-accent-primary)] text-[var(--color-text-secondary)] transition-all hover:bg-[var(--color-accent-primary-glow)]"
-                          >
-                            {suggestion}
+                  {!isLoadingInsights && insights.length > 0 && (
+                    <div className="assistant-insight-stack">
+                      {insights.slice(0, 3).map((insight, i) => {
+                        const style = insightStyles[insight.type] || insightStyles.info;
+                        return (
+                          <button type="button" key={`${insight.title}-${i}`} className="assistant-insight-card" onClick={() => handleQuickQuestion(`Profundiza en este insight: ${insight.title}. ${insight.description}`)}>
+                            <span className="assistant-insight-icon" style={{ color: style.text }}>{insight.icon}</span>
+                            <span className="min-w-0 text-left">
+                              <span className="block text-xs font-semibold text-[var(--color-text-primary)]">{insight.title}</span>
+                              <span className="block text-[10px] text-[var(--color-text-muted)] mt-0.5 line-clamp-2">{insight.description}</span>
+                            </span>
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6"/></svg>
                           </button>
-                        ))}
-                      </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--color-text-muted)] mb-2">Ideas para empezar</p>
+                    <div className="assistant-suggestion-grid">
+                      {(selectedNode
+                        ? ["¿Qué patrón ves aquí?", "¿Con qué se relaciona?", "¿Cuál sería el siguiente paso?"]
+                        : ["¿Qué debería priorizar hoy?", "¿Cómo mejorar mi constancia?", "Encuentra un patrón en mis datos"]
+                      ).map((suggestion) => (
+                        <button type="button" key={suggestion} onClick={() => handleQuickQuestion(suggestion)}>{suggestion}</button>
+                      ))}
                     </div>
                   </div>
-                )}
+                </div>
+              )}
 
-                {messages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex gap-2.5 mb-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-xl px-3.5 py-2.5 text-xs ${
-                        msg.role === "user"
-                          ? "bg-[var(--color-accent-primary)] text-[var(--color-text-inverse)] rounded-br-none"
-                          : "bg-[var(--color-surface-card)] border border-[var(--color-border-default)] text-[var(--color-text-primary)] rounded-bl-none"
-                      }`}
-                    >
-                      {msg.role === "assistant" ? (
-                        /* Markdown rendering (Mejora 1) */
-                        <div className="prose-fryd">
-                          <ReactMarkdown>{msg.content}</ReactMarkdown>
-                        </div>
-                      ) : (
-                        <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                      )}
-                      <span className="text-[9px] opacity-50 block text-right mt-1">
-                        {formatTime(msg.timestamp)}
-                      </span>
-                    </div>
+              {messages.map((msg) => (
+                <div key={msg.id} className={`assistant-message-row ${msg.role === "user" ? "is-user" : "is-assistant"}`}>
+                  {msg.role === "assistant" && <div className="assistant-message-avatar">F</div>}
+                  <div className={`assistant-message-bubble ${msg.role === "user" ? "is-user" : "is-assistant"}`}>
+                    {msg.role === "assistant" ? <div className="prose-fryd"><ReactMarkdown>{msg.content}</ReactMarkdown></div> : <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>}
+                    <span className="assistant-message-time">{formatTime(msg.timestamp)}</span>
                   </div>
-                ))}
+                </div>
+              ))}
 
-                {isTyping && (
-                  <div className="flex gap-2.5 mb-3">
-                    <div className="bg-[var(--color-surface-card)] border border-[var(--color-border-default)] rounded-xl rounded-bl-none px-3 py-2">
-                      <div className="flex gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: "0ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: "150ms" }} />
-                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-text-muted)] animate-bounce" style={{ animationDelay: "300ms" }} />
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
+              {isTyping && (
+                <div className="assistant-message-row is-assistant">
+                  <div className="assistant-message-avatar">F</div>
+                  <div className="assistant-message-bubble is-assistant assistant-typing-bubble"><span /><span /><span /></div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
 
-              {/* Chat Input area */}
-              <div className="p-3 border-t border-[var(--color-border-default)] bg-[var(--color-surface-card)] flex-shrink-0">
-                <div className="flex items-end gap-2">
-                  <textarea
-                    ref={inputRef}
-                    value={input}
-                    onChange={handleInputChange}
-                    onKeyDown={handleKeyDown}
-                    placeholder={selectedNode ? "Preguntar sobre este nodo..." : "Escribe un mensaje..."}
-                    className="fryd-input pr-3 resize-none max-h-[80px] leading-relaxed text-xs py-2 min-h-[36px]"
-                    rows={1}
-                    disabled={isTyping}
-                  />
-                  <button
-                    onClick={handleSend}
-                    disabled={!input.trim() || isTyping}
-                    className={`
-                      w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-all
-                      ${
-                        input.trim() && !isTyping
-                          ? "gradient-green text-[var(--color-text-inverse)] hover:scale-105"
-                          : "bg-[var(--color-surface-card)] text-[var(--color-text-muted)] cursor-not-allowed border border-[var(--color-border-default)]"
-                      }
-                    `}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <line x1="22" y1="2" x2="11" y2="13" />
-                      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                    </svg>
+            <div className="assistant-composer">
+              <div className="assistant-composer-box">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={handleInputChange}
+                  onKeyDown={handleKeyDown}
+                  placeholder={selectedNode ? `Pregunta sobre ${selectedNode.label}…` : "Pregunta algo a FRYD…"}
+                  rows={1}
+                  disabled={isTyping}
+                />
+                <div className="assistant-composer-footer">
+                  <span>{selectedNode ? "Usando contexto del cerebro" : "Enter para enviar · Shift+Enter para salto"}</span>
+                  <button type="button" onClick={handleSend} disabled={!input.trim() || isTyping} className="assistant-send-button" aria-label="Enviar mensaje">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></svg>
                   </button>
                 </div>
               </div>
-
+              <p className="assistant-composer-note">FRYD puede equivocarse. Valida decisiones importantes.</p>
             </div>
-          )}
-        </div>
+          </aside>
+        )}
       </div>
 
       {/* Provider Selector Modal */}
       {showProviderModal && (
         <div className="modal-overlay" onClick={() => setShowProviderModal(false)}>
-          <div className="modal-content card-static max-w-md" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-content card-static max-w-md assistant-provider-dialog" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Configurar Asistente</h2>
+              <h2 className="text-lg font-semibold text-[var(--color-text-primary)]">Configurar FRYD AI</h2>
               <button onClick={() => setShowProviderModal(false)} className="btn-ghost p-1">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
               </button>
@@ -1013,12 +874,12 @@ export default function AssistantPage() {
       {/* --- CREATIVE MODE DETAILS MODAL --- */}
       {showDetailModal && selectedNode && (() => {
         const catInfo = {
-          diary: { icon: "📝", label: "Diario", color: "#a855f7", glowColor: "rgba(168, 85, 247, 0.35)", gradient: "from-purple-500/10 to-indigo-500/10", pillStyle: { bg: "rgba(168, 85, 247, 0.08)", border: "rgba(168, 85, 247, 0.2)", text: "#c084fc" } },
-          habit: { icon: "⚡", label: "Hábito", color: "#10b981", glowColor: "rgba(16, 185, 129, 0.35)", gradient: "from-emerald-500/10 to-teal-500/10", pillStyle: { bg: "rgba(16, 185, 129, 0.08)", border: "rgba(16, 185, 129, 0.2)", text: "#34d399" } },
-          task: { icon: "✅", label: "Tarea", color: "#06b6d4", glowColor: "rgba(6, 182, 212, 0.35)", gradient: "from-cyan-500/10 to-blue-500/10", pillStyle: { bg: "rgba(6, 182, 212, 0.08)", border: "rgba(6, 182, 212, 0.2)", text: "#22d3ee" } },
-          concept: { icon: "🧠", label: "Concepto", color: "#ec4899", glowColor: "rgba(236, 72, 153, 0.35)", gradient: "from-pink-500/10 to-rose-500/10", pillStyle: { bg: "rgba(236, 72, 153, 0.08)", border: "rgba(236, 72, 153, 0.2)", text: "#f472b6" } },
-          project: { icon: "📁", label: "Proyecto", color: "#6366f1", glowColor: "rgba(99, 102, 241, 0.35)", gradient: "from-indigo-500/10 to-violet-500/10", pillStyle: { bg: "rgba(99, 102, 241, 0.08)", border: "rgba(99, 102, 241, 0.2)", text: "#818cf8" } },
-          project_task: { icon: "📋", label: "Tarea Proj.", color: "#8b5cf6", glowColor: "rgba(139, 92, 246, 0.35)", gradient: "from-violet-500/10 to-purple-500/10", pillStyle: { bg: "rgba(139, 92, 246, 0.08)", border: "rgba(139, 92, 246, 0.2)", text: "#a78bfa" } },
+          diary: { icon: "📝", label: "Diario", color: "#8b5cf6", glowColor: "rgba(139, 92, 246, 0.28)", gradient: "from-violet-500/10 to-indigo-500/10", pillStyle: { bg: "rgba(139, 92, 246, 0.08)", border: "rgba(139, 92, 246, 0.18)", text: "#a78bfa" } },
+          habit: { icon: "⚡", label: "Hábito", color: "#14b8a6", glowColor: "rgba(20, 184, 166, 0.28)", gradient: "from-teal-500/10 to-cyan-500/10", pillStyle: { bg: "rgba(20, 184, 166, 0.08)", border: "rgba(20, 184, 166, 0.18)", text: "#5eead4" } },
+          task: { icon: "✅", label: "Tarea", color: "#3b82f6", glowColor: "rgba(59, 130, 246, 0.28)", gradient: "from-blue-500/10 to-indigo-500/10", pillStyle: { bg: "rgba(59, 130, 246, 0.08)", border: "rgba(59, 130, 246, 0.18)", text: "#60a5fa" } },
+          concept: { icon: "🧠", label: "Concepto", color: "#6366f1", glowColor: "rgba(99, 102, 241, 0.30)", gradient: "from-indigo-500/10 to-blue-500/10", pillStyle: { bg: "rgba(99, 102, 241, 0.08)", border: "rgba(99, 102, 241, 0.18)", text: "#a5b4fc" } },
+          project: { icon: "📁", label: "Proyecto", color: "#7c3aed", glowColor: "rgba(124, 58, 237, 0.28)", gradient: "from-violet-600/10 to-indigo-500/10", pillStyle: { bg: "rgba(124, 58, 237, 0.08)", border: "rgba(124, 58, 237, 0.18)", text: "#a78bfa" } },
+          project_task: { icon: "📋", label: "Tarea Proj.", color: "#38bdf8", glowColor: "rgba(56, 189, 248, 0.25)", gradient: "from-sky-500/10 to-blue-500/10", pillStyle: { bg: "rgba(56, 189, 248, 0.08)", border: "rgba(56, 189, 248, 0.18)", text: "#7dd3fc" } },
         };
 
         const info = catInfo[selectedNode.type as keyof typeof catInfo] || catInfo.concept;
