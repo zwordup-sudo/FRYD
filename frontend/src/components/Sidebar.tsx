@@ -149,6 +149,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
       )}
 
       <aside
+        id="fryd-sidebar-navigation"
         className={`fryd-sidebar fixed left-0 top-0 z-50 flex h-screen w-[var(--sidebar-width)] flex-col transition-transform duration-300 ease-in-out lg:relative lg:z-auto lg:translate-x-0 ${
           isOpen ? "is-open translate-x-0" : "-translate-x-full"
         }`}

@@ -97,6 +97,33 @@ const responsiveShellCss = `
     flex: 0 0 auto;
   }
 
+  .fryd-mobile-brand-trigger {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--color-text-primary);
+    cursor: pointer;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 120ms ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .fryd-mobile-brand-trigger > div {
+    gap: 0 !important;
+  }
+
+  .fryd-mobile-brand-trigger:hover {
+    background: rgba(99, 102, 241, .09);
+    border-color: rgba(129, 140, 248, .16);
+  }
+
+  .fryd-mobile-brand-trigger:active {
+    transform: scale(.96);
+  }
+
+  .fryd-mobile-brand-trigger:focus-visible {
+    outline: 2px solid rgba(96, 165, 250, .85);
+    outline-offset: 2px;
+  }
+
   .fryd-sidebar-overlay-v15 {
     position: fixed;
     inset: 0;
@@ -264,19 +291,18 @@ export default function MainLayout() {
       <div className="fryd-main-column flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="fryd-mobile-header lg:hidden flex items-center h-[var(--header-height)] px-4 border-b border-[var(--color-border-subtle)] bg-[rgba(8,14,27,0.92)] backdrop-blur-xl flex-shrink-0">
           <button
+            type="button"
             onClick={() => setSidebarOpen(true)}
-            className="btn-ghost p-2 -ml-2"
+            className="fryd-mobile-brand-trigger flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl"
             aria-label={t.openMenu}
+            aria-expanded={sidebarOpen}
+            aria-controls="fryd-sidebar-navigation"
+            title={t.openMenu}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="3" y1="6" x2="21" y2="6" />
-              <line x1="3" y1="12" x2="15" y2="12" />
-              <line x1="3" y1="18" x2="18" y2="18" />
-            </svg>
+            <BrandMark compact />
           </button>
 
-          <h1 className="ml-3 min-w-0 truncate text-base font-semibold text-[var(--color-text-primary)]">{title}</h1>
-          <div className="ml-auto flex-shrink-0"><BrandMark compact /></div>
+          <h1 className="ml-2 min-w-0 truncate text-base font-semibold text-[var(--color-text-primary)]">{title}</h1>
         </header>
 
         <main className="fryd-main-scroll flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden">
