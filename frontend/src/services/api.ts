@@ -7,7 +7,7 @@ const isCapacitor = window.hasOwnProperty("Capacitor") ||
                     window.location.protocol === "file:";
 
 if (isCapacitor && API_URL.includes("localhost")) {
-  API_URL = "http://192.168.100.13:8000";
+  API_URL = "http://34.10.230.112:8000";
 }
 
 const api = axios.create({
