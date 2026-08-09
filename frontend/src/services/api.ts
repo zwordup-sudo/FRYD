@@ -1,9 +1,13 @@
 import axios from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL;
+let API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
-if (!API_URL) {
-  console.warn("VITE_API_URL no está definido en el archivo .env");
+const isCapacitor = window.hasOwnProperty("Capacitor") || 
+                    window.location.protocol.startsWith("capacitor") || 
+                    window.location.protocol === "file:";
+
+if (isCapacitor && API_URL.includes("localhost")) {
+  API_URL = "http://192.168.100.13:8000";
 }
 
 const api = axios.create({
