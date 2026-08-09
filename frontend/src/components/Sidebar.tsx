@@ -143,14 +143,14 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
         <button
           type="button"
           aria-label="Cerrar menú"
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
+          className="fryd-sidebar-overlay-v15 fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={`fryd-sidebar fixed left-0 top-0 z-50 flex h-screen w-[var(--sidebar-width)] flex-col transition-transform duration-300 ease-in-out lg:relative lg:z-auto lg:translate-x-0 ${
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          isOpen ? "is-open translate-x-0" : "-translate-x-full"
         }`}
       >
         <div className="fryd-sidebar-ambient" aria-hidden="true" />

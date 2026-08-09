@@ -1,84 +1,47 @@
-const CACHE_NAME = "fryd-cache-v1";
-const ASSETS = [
-  "/",
-  "/index.html",
-  "/favicon.svg",
-  "/manifest.json"
-];
+const CACHE_NAME = "fryd-cache-v15-responsive-shell";
+const SHELL_ASSETS = ["/", "/index.html", "/favicon.svg", "/manifest.json"];
 
-// Install Event
-self.addEventListener("install", (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
-    })
-  );
+self.addEventListener("install", (event) => {
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL_ASSETS)));
   self.skipWaiting();
 });
 
-// Activate Event
-self.addEventListener("activate", (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (key !== CACHE_NAME) {
-            return caches.delete(key);
-          }
-        })
-      );
-    })
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
   );
   self.clients.claim();
 });
 
-// Fetch Event
-self.addEventListener("fetch", (e) => {
-  // Only handle HTTP/HTTPS, skip extension schemas
-  if (!e.request.url.startsWith("http")) {
-    return;
-  }
+self.addEventListener("fetch", (event) => {
+  if (!event.request.url.startsWith("http")) return;
 
-  // Skip API requests - handled separately by offline sync interceptors
-  const isApiRequest = e.request.url.includes("/api/") || e.request.url.includes("/users/") || e.request.url.includes("/tasks/") || e.request.url.includes("/habits/") || e.request.url.includes("/diary/");
-  if (isApiRequest) {
-    return;
-  }
+  const url = event.request.url;
+  const isApiRequest = url.includes("/api/") || url.includes("/users/") || url.includes("/tasks/") || url.includes("/habits/") || url.includes("/diary/");
+  if (isApiRequest) return;
 
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Stale while revalidate: fetch fresh copy in background
-        fetch(e.request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(e.request, networkResponse));
-            }
-          })
-          .catch(() => {});
-        return cachedResponse;
-      }
-
-      return fetch(e.request)
-        .then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200) {
-            return networkResponse;
+  if (event.request.mode === "navigate") {
+    event.respondWith(
+      fetch(event.request, { cache: "no-store" })
+        .then((response) => {
+          if (response && response.status === 200) {
+            caches.open(CACHE_NAME).then((cache) => cache.put("/", response.clone()));
           }
-          // Cache successful GET responses for assets
-          if (e.request.method === "GET") {
-            const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(e.request, responseToCache);
-            });
-          }
-          return networkResponse;
+          return response;
         })
-        .catch(() => {
-          // If offline and request is for page navigation, fallback to app shell
-          if (e.request.mode === "navigate") {
-            return caches.match("/");
-          }
-        });
-    })
+        .catch(async () => (await caches.match(event.request)) || (await caches.match("/")))
+    );
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200 && event.request.method === "GET") {
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, response.clone()));
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
