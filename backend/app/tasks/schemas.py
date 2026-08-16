@@ -19,8 +19,9 @@ class CreateTaskSchema(BaseModel):
     @classmethod
     def validate_due_date(cls, value: datetime) -> datetime:
         value_naive = value.replace(tzinfo=None) if value.tzinfo is not None else value
-        if value_naive < datetime.utcnow():
-            raise ValueError("due_date no puede ser en el pasado")
+        today_start_utc = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        if value_naive < today_start_utc:
+            raise ValueError("due_date no puede ser anterior al día de hoy")
         return value
 
 
@@ -37,8 +38,9 @@ class UpdateTaskSchema(BaseModel):
     def validate_due_date(cls, value: datetime | None) -> datetime | None:
         if value is not None:
             value_naive = value.replace(tzinfo=None) if value.tzinfo is not None else value
-            if value_naive < datetime.utcnow():
-                raise ValueError("due_date no puede ser en el pasado")
+            today_start_utc = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            if value_naive < today_start_utc:
+                raise ValueError("due_date no puede ser anterior al día de hoy")
         return value
 
 

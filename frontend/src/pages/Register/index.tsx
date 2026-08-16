@@ -382,7 +382,17 @@ const Register: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setShowGoogleMockModal(true)}
+            onClick={() => {
+              const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+              const isCapacitor = window.hasOwnProperty("Capacitor") || 
+                                  window.location.protocol.startsWith("capacitor") || 
+                                  window.location.protocol === "file:";
+              if (isLocalhost && !isCapacitor) {
+                setShowGoogleMockModal(true);
+              } else {
+                triggerRealGoogleLogin();
+              }
+            }}
             disabled={loading}
             className="auth-google-button"
           >
