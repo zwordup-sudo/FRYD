@@ -38,13 +38,15 @@ class AnthropicProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ) -> str:
-        if not api_key:
+        import os
+        key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        if not key:
             raise ValueError("Anthropic requiere una API key.")
 
         selected_model = model or "claude-sonnet-4-20250514"
 
         headers = {
-            "x-api-key": api_key,
+            "x-api-key": key,
             "anthropic-version": "2023-06-01",
             "Content-Type": "application/json",
         }
@@ -75,13 +77,15 @@ class AnthropicProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ):
-        if not api_key:
+        import os
+        key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        if not key:
             raise ValueError("Anthropic requiere una API key.")
 
         selected_model = model or "claude-sonnet-4-20250514"
 
         headers = {
-            "x-api-key": api_key,
+            "x-api-key": key,
             "anthropic-version": "2023-06-01",
             "Content-Type": "application/json",
         }
@@ -122,12 +126,14 @@ class AnthropicProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ) -> tuple[bool, str]:
-        if not api_key:
+        import os
+        key = api_key or os.getenv("ANTHROPIC_API_KEY")
+        if not key:
             return (False, "Se requiere una API key para Anthropic.")
 
         try:
             headers = {
-                "x-api-key": api_key,
+                "x-api-key": key,
                 "anthropic-version": "2023-06-01",
                 "Content-Type": "application/json",
             }

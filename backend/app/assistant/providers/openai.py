@@ -38,7 +38,9 @@ class OpenAIProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ) -> str:
-        if not api_key:
+        import os
+        key = api_key or os.getenv("OPENAI_API_KEY")
+        if not key:
             raise ValueError("OpenAI requiere una API key.")
 
         selected_model = model or "gpt-4o-mini"
@@ -51,7 +53,7 @@ class OpenAIProvider(AIProvider):
         ]
 
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
         }
 
@@ -78,7 +80,9 @@ class OpenAIProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ):
-        if not api_key:
+        import os
+        key = api_key or os.getenv("OPENAI_API_KEY")
+        if not key:
             raise ValueError("OpenAI requiere una API key.")
 
         selected_model = model or "gpt-4o-mini"
@@ -90,7 +94,7 @@ class OpenAIProvider(AIProvider):
         ]
 
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": f"Bearer {key}",
             "Content-Type": "application/json",
         }
 
@@ -129,11 +133,13 @@ class OpenAIProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ) -> tuple[bool, str]:
-        if not api_key:
+        import os
+        key = api_key or os.getenv("OPENAI_API_KEY")
+        if not key:
             return (False, "Se requiere una API key para OpenAI.")
 
         try:
-            headers = {"Authorization": f"Bearer {api_key}"}
+            headers = {"Authorization": f"Bearer {key}"}
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(
                     f"{self.BASE_URL}/models",

@@ -31,6 +31,7 @@ type ProviderOption = {
   requires_api_key: boolean;
   available_models: string[];
   is_local: boolean;
+  has_system_key?: boolean;
 };
 
 type ConversationItem = {
@@ -211,10 +212,10 @@ export default function AssistantPage() {
       setProviders(data);
     } catch {
       setProviders([
-        { id: "ollama", name: "Ollama (Local)", description: "Modelo local con Ollama", requires_api_key: false, available_models: ["llama3", "mistral"], is_local: true },
-        { id: "openai", name: "OpenAI", description: "GPT-4, GPT-3.5", requires_api_key: true, available_models: ["gpt-4o-mini", "gpt-4o"], is_local: false },
-        { id: "anthropic", name: "Anthropic", description: "Claude", requires_api_key: true, available_models: ["claude-sonnet-4-20250514"], is_local: false },
-        { id: "gemini", name: "Google Gemini", description: "Gemini Pro", requires_api_key: true, available_models: ["gemini-2.0-flash"], is_local: false },
+        { id: "ollama", name: "Ollama (Local)", description: "Modelo local con Ollama", requires_api_key: false, available_models: ["llama3", "mistral"], is_local: true, has_system_key: false },
+        { id: "openai", name: "OpenAI", description: "GPT-4, GPT-3.5", requires_api_key: true, available_models: ["gpt-4o-mini", "gpt-4o"], is_local: false, has_system_key: false },
+        { id: "anthropic", name: "Anthropic", description: "Claude", requires_api_key: true, available_models: ["claude-sonnet-4-20250514"], is_local: false, has_system_key: false },
+        { id: "gemini", name: "Google Gemini", description: "Gemini Pro", requires_api_key: true, available_models: ["gemini-2.0-flash"], is_local: false, has_system_key: false },
       ]);
     }
   };
@@ -834,9 +835,15 @@ export default function AssistantPage() {
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-... o tu clave de API"
+                  placeholder={currentProvider?.has_system_key ? "Clave de la plataforma activa (opcional)" : "sk-... o tu clave de API"}
                   className="fryd-input"
                 />
+                {currentProvider?.has_system_key && (
+                  <p className="text-[10px] text-emerald-400 mt-1.5 flex items-center gap-1 font-medium">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Clave global de FRYD disponible. Puedes dejar este campo vacío.
+                  </p>
+                )}
               </div>
             )}
 

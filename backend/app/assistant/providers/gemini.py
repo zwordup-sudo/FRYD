@@ -38,7 +38,9 @@ class GeminiProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ) -> str:
-        if not api_key:
+        import os
+        key = api_key or os.getenv("GEMINI_API_KEY")
+        if not key:
             raise ValueError("Google Gemini requiere una API key.")
 
         selected_model = model or "gemini-2.0-flash"
@@ -65,7 +67,7 @@ class GeminiProvider(AIProvider):
             },
         }
 
-        url = f"{self.BASE_URL}/models/{selected_model}:generateContent?key={api_key}"
+        url = f"{self.BASE_URL}/models/{selected_model}:generateContent?key={key}"
 
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(url, json=payload)
@@ -82,12 +84,14 @@ class GeminiProvider(AIProvider):
         model: str | None = None,
         api_key: str | None = None,
     ) -> tuple[bool, str]:
-        if not api_key:
+        import os
+        key = api_key or os.getenv("GEMINI_API_KEY")
+        if not key:
             return (False, "Se requiere una API key para Google Gemini.")
 
         try:
             selected_model = model or "gemini-2.0-flash"
-            url = f"{self.BASE_URL}/models/{selected_model}?key={api_key}"
+            url = f"{self.BASE_URL}/models/{selected_model}?key={key}"
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(url)
                 response.raise_for_status()

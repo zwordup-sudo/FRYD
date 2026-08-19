@@ -71,6 +71,7 @@ class ProviderInfo(BaseModel):
     requires_api_key: bool
     available_models: list[str]
     is_local: bool
+    has_system_key: bool = False
 
 
 class TestConnectionRequest(BaseModel):
