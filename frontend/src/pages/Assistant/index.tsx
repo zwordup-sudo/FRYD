@@ -215,7 +215,7 @@ export default function AssistantPage() {
         { id: "ollama", name: "Ollama (Local)", description: "Modelo local con Ollama", requires_api_key: false, available_models: ["llama3", "mistral"], is_local: true, has_system_key: false },
         { id: "openai", name: "OpenAI", description: "GPT-4, GPT-3.5", requires_api_key: true, available_models: ["gpt-4o-mini", "gpt-4o"], is_local: false, has_system_key: false },
         { id: "anthropic", name: "Anthropic", description: "Claude", requires_api_key: true, available_models: ["claude-sonnet-4-20250514"], is_local: false, has_system_key: false },
-        {id: "gemini", name: "Google Gemini", description: "Gemini Pro", requires_api_key: true, available_models: ["gemini-2.5-flash", "gemini-2.5-pro", "gemini-3.7-flash"], is_local: false, has_system_key: false },
+        {id: "gemini", name: "Google Gemini", description: "Gemini Pro", requires_api_key: true, available_models: ["gemini-1.5-flash", "gemini-1.5-pro"], is_local: false, has_system_key: false },
       ]);
     }
   };
