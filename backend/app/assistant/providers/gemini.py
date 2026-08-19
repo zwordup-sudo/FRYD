@@ -30,7 +30,7 @@ class GeminiProvider(AIProvider):
 
     @property
     def available_models(self) -> list[str]:
-        return ["gemini-1.5-flash", "gemini-1.5-pro"]
+        return ["gemini-flash-latest", "gemini-pro-latest"]
 
     async def generate(
         self,
@@ -43,7 +43,12 @@ class GeminiProvider(AIProvider):
         if not key:
             raise ValueError("Google Gemini requiere una API key.")
 
-        selected_model = model or "gemini-1.5-flash"
+        selected_model = model or "gemini-flash-latest"
+        # Map user-friendly model selections if any
+        if selected_model == "gemini-1.5-flash" or selected_model == "gemini-2.5-flash":
+            selected_model = "gemini-flash-latest"
+        elif selected_model == "gemini-1.5-pro" or selected_model == "gemini-2.5-pro":
+            selected_model = "gemini-pro-latest"
 
         system_prompt, clean_messages = self._extract_system_prompt(messages)
 
@@ -90,7 +95,11 @@ class GeminiProvider(AIProvider):
             return (False, "Se requiere una API key para Google Gemini.")
 
         try:
-            selected_model = model or "gemini-1.5-flash"
+            selected_model = model or "gemini-flash-latest"
+            if selected_model == "gemini-1.5-flash" or selected_model == "gemini-2.5-flash":
+                selected_model = "gemini-flash-latest"
+            elif selected_model == "gemini-1.5-pro" or selected_model == "gemini-2.5-pro":
+                selected_model = "gemini-pro-latest"
             url = f"{self.BASE_URL}/models/{selected_model}:generateContent?key={key}"
             payload = {"contents": [{"parts": [{"text": "hi"}]}]}
             async with httpx.AsyncClient(timeout=10.0) as client:
