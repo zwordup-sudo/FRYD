@@ -1,4 +1,4 @@
-const CACHE_NAME = "fryd-cache-v16-logo-menu-trigger";
+const CACHE_NAME = "fryd-cache-v17-login-concept-2";
 const SHELL_ASSETS = ["/", "/index.html", "/favicon.svg", "/manifest.json"];
 
 self.addEventListener("install", (event) => {

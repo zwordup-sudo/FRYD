@@ -114,16 +114,19 @@ const Login: React.FC = () => {
   };
 
   return (
-    <AuthShell>
-      <div className="mb-8">
-        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[var(--color-border-default)] bg-white/[0.025] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">
-          <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent-success)]" />
-          Tu espacio está listo
+    <AuthShell variant="login-concept-2">
+      <div className="auth-c2-login-header">
+        <div className="auth-c2-status-pill">
+          <span className="auth-c2-status-shield" aria-hidden="true">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            </svg>
+          </span>
+          <span>Tu espacio está listo</span>
+          <span className="auth-c2-status-dot" aria-hidden="true" />
         </div>
-        <h2 className="text-[2rem] font-semibold tracking-[-0.04em] text-white sm:text-[2.25rem]">
-          Bienvenido de vuelta.
-        </h2>
-        <p className="mt-2 max-w-md text-sm leading-6 text-[var(--color-text-secondary)]">
+        <h2>Bienvenido de vuelta.</h2>
+        <p>
           Entra a FRYD y continúa exactamente donde dejaste tus tareas, hábitos, proyectos e ideas.
         </p>
       </div>
@@ -138,7 +141,7 @@ const Login: React.FC = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-5">
+      <form onSubmit={handleSubmit} className="auth-c2-login-form">
         <div>
           <label htmlFor="login-email" className="mb-2 block text-xs font-semibold text-[var(--color-text-secondary)]">
             Correo electrónico
@@ -168,7 +171,7 @@ const Login: React.FC = () => {
             <label htmlFor="login-password" className="block text-xs font-semibold text-[var(--color-text-secondary)]">
               Contraseña
             </label>
-            <span className="text-[10px] font-medium text-[var(--color-text-muted)]">Protegida y privada</span>
+            <span className="auth-c2-private-label">Protegida y privada</span>
           </div>
           <div className="relative">
             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">
@@ -201,7 +204,7 @@ const Login: React.FC = () => {
         <button
           type="submit"
           disabled={loading}
-          className="btn-primary mt-2 w-full rounded-xl py-3.5 text-sm font-semibold disabled:pointer-events-none disabled:opacity-55"
+          className="btn-primary auth-c2-primary-button disabled:pointer-events-none disabled:opacity-55"
         >
           {loading ? (
             <>
@@ -219,7 +222,7 @@ const Login: React.FC = () => {
         </button>
       </form>
 
-      <div className="my-7 flex items-center gap-3" aria-hidden="true">
+      <div className="auth-c2-divider" aria-hidden="true">
         <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
         <span className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[var(--color-text-muted)]">o continúa con</span>
         <span className="h-px flex-1 bg-[var(--color-border-subtle)]" />
@@ -245,7 +248,7 @@ const Login: React.FC = () => {
         Continuar con Google
       </button>
 
-      <div className="mt-7 rounded-xl border border-[var(--color-border-subtle)] bg-white/[0.018] px-4 py-3.5">
+      <div className="auth-c2-trust-note">
         <div className="flex items-start gap-3">
           <div className="mt-0.5 flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-300">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -259,7 +262,7 @@ const Login: React.FC = () => {
         </div>
       </div>
 
-      <p className="mt-8 text-center text-sm text-[var(--color-text-secondary)]">
+      <p className="auth-c2-signup-link">
         ¿Todavía no tienes cuenta?{" "}
         <Link to="/register" className="font-semibold text-indigo-300 transition-colors hover:text-indigo-200">
           Crea tu espacio

@@ -7,6 +7,7 @@ type AuthShellProps = {
   title?: string;
   description?: string;
   contentWidth?: "default" | "wide";
+  variant?: "classic" | "login-concept-2";
 };
 
 const FeatureIcon = ({ children }: { children: ReactNode }) => (
@@ -15,13 +16,133 @@ const FeatureIcon = ({ children }: { children: ReactNode }) => (
   </div>
 );
 
+function LoginConceptHero() {
+  return (
+    <section className="auth-c2-hero" aria-label="FRYD — Tu sistema personal">
+      <div className="auth-c2-orbit" aria-hidden="true">
+        <span className="auth-c2-orbit-line auth-c2-orbit-line-1" />
+        <span className="auth-c2-orbit-line auth-c2-orbit-line-2" />
+        <span className="auth-c2-orbit-line auth-c2-orbit-line-3" />
+        <span className="auth-c2-orbit-glow" />
+        <span className="auth-c2-orbit-dot" />
+      </div>
+
+      <div className="auth-c2-hero-inner">
+        <BrandMark className="auth-c2-brand" />
+
+        <div className="auth-c2-copy">
+          <div className="auth-c2-eyebrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z" />
+            </svg>
+            Tu sistema personal
+          </div>
+
+          <h1 className="auth-c2-title">
+            <span>Convierte</span>
+            <span>intención en</span>
+            <span>progreso<span className="auth-c2-title-dot">.</span></span>
+          </h1>
+
+          <p className="auth-c2-description">
+            Tareas, hábitos, diario, proyectos e inteligencia conectados en un solo espacio que evoluciona contigo.
+          </p>
+
+          <div className="auth-c2-features">
+            <article className="auth-c2-feature auth-c2-feature-purple">
+              <div className="auth-c2-feature-icon" aria-hidden="true">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="4" y="5" width="16" height="15" rx="3" />
+                  <path d="M8 3v4M16 3v4M8.5 12l2.2 2.2L15.5 9.5" />
+                </svg>
+              </div>
+              <h3>Organiza</h3>
+              <p>Captura lo importante y mantén el enfoque.</p>
+              <span className="auth-c2-feature-accent" />
+            </article>
+
+            <article className="auth-c2-feature auth-c2-feature-blue">
+              <div className="auth-c2-feature-icon" aria-hidden="true">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="9" cy="8" r="2.5" />
+                  <circle cx="16.5" cy="9.5" r="2" />
+                  <path d="M4.5 18a4.5 4.5 0 0 1 9 0M13.5 17.5a3.5 3.5 0 0 1 6 0" />
+                </svg>
+              </div>
+              <h3>Conecta</h3>
+              <p>Une tu contexto y todo lo que importa.</p>
+              <span className="auth-c2-feature-accent" />
+            </article>
+
+            <article className="auth-c2-feature auth-c2-feature-teal">
+              <div className="auth-c2-feature-icon" aria-hidden="true">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 17l5-5 3 3 7-8" />
+                  <path d="M15 7h4v4" />
+                </svg>
+              </div>
+              <h3>Avanza</h3>
+              <p>Decide con claridad y mide tu progreso.</p>
+              <span className="auth-c2-feature-accent" />
+            </article>
+          </div>
+
+          <div className="auth-c2-insight">
+            <div className="auth-c2-insight-icon" aria-hidden="true">
+              <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 2.8l2 5.2 5.2 2-5.2 2-2 5.2-2-5.2-5.2-2 5.2-2 2-5.2z" />
+              </svg>
+            </div>
+            <div className="auth-c2-insight-copy">
+              <p className="auth-c2-insight-label">FRYD Insight</p>
+              <p>Con tu información conectada, FRYD puede ayudarte a reconocer patrones y decidir qué merece atención.</p>
+            </div>
+            <svg className="auth-c2-insight-arrow" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 export default function AuthShell({
   children,
   eyebrow = "Tu sistema personal",
   title = "Convierte intención en progreso.",
   description = "Tareas, hábitos, diario, proyectos e inteligencia conectados en un solo espacio que evoluciona contigo.",
   contentWidth = "default",
+  variant = "classic",
 }: AuthShellProps) {
+  if (variant === "login-concept-2") {
+    return (
+      <main className="auth-shell auth-shell-c2">
+        <div className="auth-c2-noise" aria-hidden="true" />
+        <div className="auth-c2-layout">
+          <LoginConceptHero />
+
+          <section className="auth-c2-stage">
+            <div className="auth-c2-stage-glow auth-c2-stage-glow-top" aria-hidden="true" />
+            <div className="auth-c2-stage-glow auth-c2-stage-glow-bottom" aria-hidden="true" />
+
+            <div className="auth-c2-mobile-brand">
+              <BrandMark />
+              <span className="auth-c2-mobile-status">
+                <span /> Espacio personal
+              </span>
+            </div>
+
+            <div className={`auth-c2-login-card ${contentWidth === "wide" ? "auth-c2-login-card-wide" : ""}`}>
+              <div className="auth-c2-card-glow" aria-hidden="true" />
+              <div className="auth-c2-card-content animate-fade-in">{children}</div>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="auth-shell relative min-h-screen overflow-hidden bg-[var(--color-surface-base)] text-[var(--color-text-primary)]">
       <div className="pointer-events-none absolute inset-0 auth-grid opacity-35" />
@@ -30,7 +151,6 @@ export default function AuthShell({
       <div className="pointer-events-none absolute left-[42%] top-[28%] h-[18rem] w-[18rem] rounded-full bg-blue-500/[0.06] blur-[100px]" />
 
       <div className="relative z-10 grid min-h-screen lg:grid-cols-[minmax(0,1.08fr)_minmax(28rem,0.92fr)]">
-        {/* Brand side: deliberately calmer and less dense than the form side. */}
         <section className="hidden min-h-screen border-r border-[var(--color-border-subtle)] px-10 py-10 lg:flex xl:px-16 xl:py-14">
           <div className="mx-auto flex w-full max-w-[43rem] flex-col">
             <BrandMark />
@@ -48,7 +168,6 @@ export default function AuthShell({
                 {description}
               </p>
 
-              {/* Compact value props replace the previous three large cards. */}
               <div className="mt-12 flex max-w-xl flex-wrap gap-3">
                 <div className="flex min-w-[10rem] flex-1 items-center gap-3 rounded-2xl border border-[var(--color-border-subtle)] bg-white/[0.025] px-4 py-3">
                   <FeatureIcon>
@@ -118,7 +237,6 @@ export default function AuthShell({
           </div>
         </section>
 
-        {/* Form side intentionally preserved: user feedback indicated this area already works well. */}
         <section className="flex min-h-screen items-center justify-center px-4 py-8 sm:px-8 lg:px-10 xl:px-16">
           <div className={`w-full animate-fade-in ${contentWidth === "wide" ? "max-w-[39rem]" : "max-w-[31rem]"}`}>
             <div className="mb-9 flex items-center justify-between lg:hidden">
