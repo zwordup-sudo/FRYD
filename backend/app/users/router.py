@@ -1,12 +1,14 @@
 import uuid
+import random
+from datetime import datetime, timedelta
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.session import get_db
-from .schemas import UserCreate, UserRead, Token, UserLogin, UserSettingsUpdate
+from .schemas import UserCreate, UserRead, Token, UserLogin, UserSettingsUpdate, ForgotPasswordRequest, ResetPasswordRequest
 from .services import create_user, get_user_by_email, get_user_by_username, update_user_settings
-from .security import create_access_token, verify_password, get_current_user, limiter
+from .security import create_access_token, verify_password, get_current_user, limiter, get_password_hash
 from .models import User
 
 router = APIRouter()
@@ -171,3 +173,55 @@ def login_with_google(
     # Generate Access Token
     access_token = create_access_token(data={"sub": user.email})
     return {"access_token": access_token, "token_type": "bearer"}
+
+
+@router.post("/forgot-password")
+@limiter.limit("3/minute")
+def forgot_password(
+    request: Request,
+    req: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    email = req.email.lower().strip()
+    user = get_user_by_email(db, email)
+    if not user:
+        return {"message": "Si el correo está registrado, se enviará un enlace de recuperación."}
+    
+    token = f"{random.randint(100000, 999999)}"
+    user.reset_token = token
+    user.reset_token_expires_at = datetime.utcnow() + timedelta(minutes=15)
+    db.commit()
+    
+    return {
+        "message": "Si el correo está registrado, se enviará un enlace de recuperación.",
+        "dev_reset_token": token
+    }
+
+
+@router.post("/reset-password")
+@limiter.limit("3/minute")
+def reset_password(
+    request: Request,
+    req: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    email = req.email.lower().strip()
+    user = get_user_by_email(db, email)
+    if not user or not user.reset_token or user.reset_token != req.token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Código de recuperación inválido o expirado."
+        )
+        
+    if user.reset_token_expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="El código de recuperación ha expirado."
+        )
+        
+    user.hashed_password = get_password_hash(req.new_password)
+    user.reset_token = None
+    user.reset_token_expires_at = None
+    db.commit()
+    
+    return {"message": "Contraseña restablecida exitosamente."}

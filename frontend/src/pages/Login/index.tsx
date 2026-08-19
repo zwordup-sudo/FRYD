@@ -171,7 +171,9 @@ const Login: React.FC = () => {
             <label htmlFor="login-password" className="block text-xs font-semibold text-[var(--color-text-secondary)]">
               Contraseña
             </label>
-            <span className="auth-c2-private-label">Protegida y privada</span>
+            <Link to="/forgot-password" className="text-[10px] font-semibold text-indigo-300 transition-colors hover:text-indigo-200">
+              ¿Olvidaste tu contraseña?
+            </Link>
           </div>
           <div className="relative">
             <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--color-text-muted)]">

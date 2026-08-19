@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime
 from sqlalchemy.orm import relationship
 from app.db.base_class import Base
 
@@ -10,6 +10,10 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String, nullable=False)
+
+    # Password Recovery Settings
+    reset_token = Column(String, nullable=True)
+    reset_token_expires_at = Column(DateTime, nullable=True)
 
     # WhatsApp Integration Settings
     _whatsapp_phone = Column("whatsapp_phone", String, unique=True, index=True, nullable=True)
