@@ -91,9 +91,10 @@ class GeminiProvider(AIProvider):
 
         try:
             selected_model = model or "gemini-1.5-flash"
-            url = f"{self.BASE_URL}/models/{selected_model}?key={key}"
+            url = f"{self.BASE_URL}/models/{selected_model}:generateContent?key={key}"
+            payload = {"contents": [{"parts": [{"text": "hi"}]}]}
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(url)
+                response = await client.post(url, json=payload)
                 response.raise_for_status()
                 return (True, "Conexión exitosa con Google Gemini.")
         except httpx.HTTPStatusError as e:
