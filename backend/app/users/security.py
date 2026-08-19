@@ -14,7 +14,7 @@ limiter = Limiter(key_func=get_remote_address)
 
 SECRET_KEY = os.getenv("SECRET_KEY", "fryd_super_secret_key_change_me_in_production")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # 30 minutes
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 180  # 180 days
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="users/login")
 
