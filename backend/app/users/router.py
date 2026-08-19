@@ -1,8 +1,9 @@
 import uuid
 import random
+import os
 from datetime import datetime, timedelta
 from pydantic import BaseModel
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, BackgroundTasks
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.session import get_db
@@ -10,6 +11,7 @@ from .schemas import UserCreate, UserRead, Token, UserLogin, UserSettingsUpdate,
 from .services import create_user, get_user_by_email, get_user_by_username, update_user_settings
 from .security import create_access_token, verify_password, get_current_user, limiter, get_password_hash
 from .models import User
+from .email import send_reset_email
 
 router = APIRouter()
 
@@ -180,6 +182,7 @@ def login_with_google(
 def forgot_password(
     request: Request,
     req: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db)
 ):
     email = req.email.lower().strip()
@@ -192,10 +195,23 @@ def forgot_password(
     user.reset_token_expires_at = datetime.utcnow() + timedelta(minutes=15)
     db.commit()
     
-    return {
-        "message": "Si el correo está registrado, se enviará un enlace de recuperación.",
-        "dev_reset_token": token
-    }
+    # Check if SMTP configuration is set in env
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = os.getenv("SMTP_PORT")
+    smtp_username = os.getenv("SMTP_USERNAME")
+    smtp_password = os.getenv("SMTP_PASSWORD")
+    smtp_active = bool(smtp_host and smtp_port and smtp_username and smtp_password)
+    
+    if smtp_active:
+        background_tasks.add_task(send_reset_email, user.email, token)
+        return {
+            "message": "Si el correo está registrado, se enviará un enlace de recuperación."
+        }
+    else:
+        return {
+            "message": "Si el correo está registrado, se enviará un enlace de recuperación.",
+            "dev_reset_token": token
+        }
 
 
 @router.post("/reset-password")
